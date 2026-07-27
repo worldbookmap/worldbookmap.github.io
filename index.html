@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>문학 세계 지도</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f5f9;
+            color: #233142;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1f3c88, #355c7d);
+            color: white;
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            margin-bottom: 0.25rem;
+        }
+
+        header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            min-height: 0;
+            min-height: 520px;
+            flex-wrap: nowrap;
+            align-items: flex-start;
+        }
+
+        #map-container {
+            flex: 2 1 0;
+            min-height: 420px;
+            height: 540px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            background: #e7ecf3;
+            position: relative;
+            z-index: 1;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+        }
+
+        #info-panel {
+            flex: 0 0 320px;
+            width: 320px;
+            max-height: 540px;
+            background: white;
+            border-radius: 12px;
+            padding: 1.1rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;
+            position: relative;
+            z-index: 2;
+            transition: all 0.25s ease;
+        }
+
+        #info-panel.is-collapsed {
+            display: none;
+        }
+
+        .panel-placeholder {
+            color: #6b7280;
+            line-height: 1.6;
+            padding-top: 1rem;
+        }
+
+        .panel-toggle {
+            position: absolute;
+            top: 0.7rem;
+            right: 0.7rem;
+            border: none;
+            border-radius: 999px;
+            background: #2563eb;
+            color: white;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 4;
+        }
+
+        .panel-toggle:hover {
+            background: #1d4ed8;
+        }
+
+        .location-title {
+            color: #1d4ed8;
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 2px solid #93c5fd;
+            padding-bottom: 0.4rem;
+        }
+
+        .book-item {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            border-radius: 0 8px 8px 0;
+            padding: 0.85rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .book-title {
+            font-weight: 700;
+            color: #14213d;
+            margin-bottom: 0.25rem;
+        }
+
+        .book-author {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 0.3rem;
+        }
+
+        .book-desc {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+
+        .list-container {
+            margin: 0 1rem 1rem;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 3;
+        }
+
+        .list-container h2 {
+            font-size: 1.1rem;
+            color: #233142;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-summary {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 0.8rem;
+        }
+
+        .filter-reset-btn {
+            border: none;
+            border-radius: 999px;
+            background: #2563eb;
+            color: white;
+            padding: 0.45rem 0.8rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-reset-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .all-works-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .region-group {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 0.8rem;
+        }
+
+        .region-group-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1d4ed8;
+            margin-bottom: 0.6rem;
+        }
+
+        .city-group {
+            margin-left: 0.4rem;
+            margin-bottom: 0.7rem;
+            padding: 0.6rem 0.7rem;
+            border-left: 3px solid #93c5fd;
+            background: white;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .city-group-title {
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 0.45rem;
+        }
+
+        .region-group-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.8rem;
+        }
+
+        .work-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .chip {
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 0.25rem 0.6rem;
+            font-size: 0.83rem;
+            cursor: pointer;
+        }
+
+        .chip:hover {
+            background: #dbeafe;
+        }
+
+        .arrow {
+            color: #64748b;
+        }
+
+        .work-title {
+            font-weight: 700;
+            color: #14213d;
+        }
+
+        .empty-state {
+            color: #64748b;
+            padding: 1rem 0;
+        }
+
+        @media (max-width: 860px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                align-items: stretch;
+                min-height: auto;
+            }
+
+            #map-container {
+                height: 420px;
+                min-height: 420px;
+            }
+
+            #info-panel {
+                width: 100%;
+                max-width: none;
+                min-width: 0;
+                max-height: 480px;
+                min-height: 280px;
+                flex-basis: auto;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🗺️ 세계 문학 지도 여행</h1>
+        <p>지역별로 대표 작품을 연결해 보는 웹 앱입니다.</p>
+    </header>
+
+    <div class="main-container">
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+        <aside id="info-panel" class="is-collapsed">
+            <button type="button" class="panel-toggle" id="panel-toggle-btn">▶ 열기</button>
+            <div class="panel-placeholder">지도 위의 핀을 클릭하면 해당 지역의 작품 목록이 이곳에 표시됩니다.</div>
+        </aside>
+    </div>
+
+    <div class="list-container">
+        <div class="list-header">
+            <h2>📚 전체 작품 목록</h2>
+            <button type="button" class="filter-reset-btn" id="reset-filter-btn">전체 보기</button>
+        </div>
+        <div class="filter-summary" id="filter-summary">모든 작품을 표시 중입니다.</div>
+        <div class="all-works-grid" id="all-works-list"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        // 나중에 XML로 분리할 수 있도록, 우선 단일 파일 안에 데이터 구조를 저장합니다.
+        const literatureData = [
+            {
+                id: "seoul",
+                country: "대한민국",
+                city: "서울",
+                lat: 37.5665,
+                lng: 126.9780,
+                works: [
+                    { title: "광장", author: "최인훈", desc: "분단 현실 속에서 지식인이 겪는 고뇌와 갈등을 그린 한국 현대소설의 대표작입니다." },
+                    { title: "날개", author: "이상", desc: "서울의 도시 감각과 자아의 분열을 실험적인 문체로 보여주는 작품입니다." }
+                ]
+            },
+            {
+                id: "london",
+                country: "영국",
+                city: "런던",
+                lat: 51.5074,
+                lng: -0.1278,
+                works: [
+                    { title: "위대한 유산", author: "찰스 디킨스", desc: "산업혁명기 런던을 배경으로 한 성장 서사와 인간성 회복을 그린 작품입니다." },
+                    { title: "런던 스케치", author: "찰스 디킨스", desc: "19세기 런던의 생활을 섬세하게 담아낸 에세이집입니다." }
+                ]
+            },
+            {
+                id: "paris",
+                country: "프랑스",
+                city: "파리",
+                lat: 48.8566,
+                lng: 2.3522,
+                works: [
+                    { title: "레 미제라블", author: "빅토르 위고", desc: "파리를 중심으로 한 인간의 구원과 사회의 변화를 다룬 대서사시입니다." },
+                    { title: "잃어버린 시간을 찾아서", author: "마르셀 프루스트", desc: "기억과 자아를 깊이 탐구하는 파리의 사교계와 정서를 다룬 작품입니다." }
+                ]
+            },
+            {
+                id: "newyork",
+                country: "미국",
+                city: "뉴욕",
+                lat: 40.7128,
+                lng: -74.0060,
+                works: [
+                    { title: "위대한 개츠비", author: "F. 스콧 피츠제럴드", desc: "1920년대 뉴욕의 화려함과 허상을 통해 아메리칸 드림의 모순을 보여줍니다." },
+                    { title: "호밀밭의 파수꾼", author: "J.D. 샐린저", desc: "뉴욕의 거리에서 방황하는 청년의 시선으로 기성 세대의 위선을 비판합니다." }
+                ]
+            },
+            {
+                id: "tokyo",
+                country: "일본",
+                city: "도쿄",
+                lat: 35.6762,
+                lng: 139.6503,
+                works: [
+                    { title: "노인의 바다", author: "헤밍웨이", desc: "도쿄의 도시성에 대한 인상과 인간의 고독을 다룬 작품입니다." },
+                    { title: "바람과 함께 사라지다", author: "마가렛 미첼", desc: "도쿄의 현대적 긴장감과 삶의 변화감을 느끼게 하는 서사입니다." }
+                ]
+            }
+        ];
+
+        const countryFlags = {
+            대한민국: "🇰🇷",
+            영국: "🇬🇧",
+            프랑스: "🇫🇷",
+            미국: "🇺🇸",
+            일본: "🇯🇵"
+        };
+
+        function getCountryFlag(country) {
+            return countryFlags[country] || "🌏";
+        }
+
+        const map = L.map("map", {
+            zoomControl: true,
+            attributionControl: true
+        }).setView([37.5665, 126.9780], 3);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap contributors",
+            maxZoom: 18
+        }).addTo(map);
+
+        const infoPanel = document.getElementById("info-panel");
+        const allWorksList = document.getElementById("all-works-list");
+        const panelToggleBtn = document.getElementById("panel-toggle-btn");
+        let isMobileLayout = window.innerWidth <= 860;
+        const filterSummary = document.getElementById("filter-summary");
+        const resetFilterBtn = document.getElementById("reset-filter-btn");
+        const markers = [];
+        let currentFilter = { type: "all" };
+
+        function highlightMarkersBySelection(locationId) {
+            markers.forEach(marker => {
+                const isActive = marker.locationId === locationId;
+                marker.setOpacity(isActive ? 1 : 0.35);
+                if (marker.setZIndexOffset) {
+                    marker.setZIndexOffset(isActive ? 1000 : 0);
+                }
+            });
+        }
+
+        function setInfoPanelVisible(shouldShow) {
+            if (shouldShow) {
+                infoPanel.classList.remove("is-collapsed");
+                panelToggleBtn.textContent = "▼ 닫기";
+            } else {
+                infoPanel.classList.add("is-collapsed");
+                panelToggleBtn.textContent = "▶ 열기";
+            }
+        }
+
+        function syncInfoPanelState() {
+            const mobile = window.innerWidth <= 860;
+            isMobileLayout = mobile;
+            setInfoPanelVisible(true);
+        }
+
+        function renderLocationInfo(location) {
+            let html = `<h2 class="location-title">📍 ${location.city}, ${getCountryFlag(location.country)} ${location.country}</h2>`;
+            location.works.forEach(work => {
+                html += `
+                    <div class="book-item">
+                        <div class="book-title">📘 ${work.title}</div>
+                        <div class="book-author">저자: ${work.author}</div>
+                        <div class="book-desc">${work.desc}</div>
+                    </div>
+                `;
+            });
+            infoPanel.innerHTML = html;
+        }
+
+        function getFilteredWorks() {
+            const allWorks = literatureData.flatMap(location =>
+                location.works.map(work => ({ ...work, location }))
+            );
+
+            if (currentFilter.type === "region") {
+                return allWorks.filter(item => item.location.city === currentFilter.value);
+            }
+
+            if (currentFilter.type === "author") {
+                return allWorks.filter(item => item.author === currentFilter.value);
+            }
+
+            return allWorks;
+        }
+
+        function updateFilterSummary() {
+            if (currentFilter.type === "region") {
+                filterSummary.textContent = `${currentFilter.value} 지역의 작품만 표시 중입니다.`;
+            } else if (currentFilter.type === "author") {
+                filterSummary.textContent = `${currentFilter.value} 저자의 작품만 표시 중입니다.`;
+            } else {
+                filterSummary.textContent = "모든 작품을 표시 중입니다.";
+            }
+        }
+
+        function renderAllWorksList() {
+            const works = getFilteredWorks();
+            let html = "";
+
+            if (!works.length) {
+                html = '<div class="empty-state">표시할 작품이 없습니다.</div>';
+            } else {
+                const groupedByCountry = works.reduce((acc, work) => {
+                    if (!acc[work.location.country]) {
+                        acc[work.location.country] = {};
+                    }
+                    if (!acc[work.location.country][work.location.city]) {
+                        acc[work.location.country][work.location.city] = [];
+                    }
+                    acc[work.location.country][work.location.city].push(work);
+                    return acc;
+                }, {});
+
+                Object.entries(groupedByCountry).forEach(([country, cities]) => {
+                    html += `
+                        <div class="region-group">
+                            <div class="region-group-title">${getCountryFlag(country)} ${country}</div>
+                    `;
+
+                    Object.entries(cities).forEach(([city, cityWorks]) => {
+                        html += `
+                            <div class="city-group">
+                                <div class="city-group-title">🏙️ ${city}</div>
+                                <div class="region-group-items">
+                        `;
+
+                        cityWorks.forEach(work => {
+                            html += `
+                                <div class="book-item">
+                                    <div class="work-line">
+                                        <button type="button" class="chip" data-filter="region" data-value="${work.location.city}">${work.location.city}</button>
+                                        <span class="arrow">›</span>
+                                        <span class="work-title">${work.title}</span>
+                                        <span class="arrow">(</span>
+                                        <button type="button" class="chip" data-filter="author" data-value="${work.author}">저자: ${work.author}</button>
+                                        <span class="arrow">)</span>
+                                    </div>
+                                    <div class="book-desc">${work.desc}</div>
+                                </div>
+                            `;
+                        });
+
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        </div>
+                    `;
+                });
+            }
+
+            allWorksList.innerHTML = html;
+            updateFilterSummary();
+        }
+
+        function selectLocation(locationId) {
+            const location = literatureData.find(item => item.id === locationId);
+            if (!location) return;
+
+            renderLocationInfo(location);
+            map.panTo([location.lat, location.lng], { animate: true, duration: 0.7 });
+            highlightMarkersBySelection(locationId);
+        }
+
+        literatureData.forEach(location => {
+            const marker = L.marker([location.lat, location.lng]).addTo(map);
+            marker.bindTooltip(`${location.city} (${location.country})`);
+            marker.locationId = location.id;
+            marker.on("click", () => selectLocation(location.id));
+            markers.push(marker);
+        });
+
+        allWorksList.addEventListener("click", (event) => {
+            const button = event.target.closest("button[data-filter]");
+            if (!button) return;
+
+            if (button.dataset.filter === "region") {
+                const targetLocation = literatureData.find(item => item.city === button.dataset.value);
+                if (targetLocation) {
+                    currentFilter = {
+                        type: "region",
+                        value: button.dataset.value
+                    };
+                    renderAllWorksList();
+                    selectLocation(targetLocation.id);
+                    return;
+                }
+            }
+
+            currentFilter = {
+                type: button.dataset.filter,
+                value: button.dataset.value
+            };
+            renderAllWorksList();
+        });
+
+        resetFilterBtn.addEventListener("click", () => {
+            currentFilter = { type: "all" };
+            renderAllWorksList();
+        });
+
+        panelToggleBtn.addEventListener("click", () => {
+            const isCollapsed = infoPanel.classList.contains("is-collapsed");
+            setInfoPanelVisible(!isCollapsed);
+        });
+
+        syncInfoPanelState();
+        renderAllWorksList();
+        selectLocation("seoul");
+
+        setTimeout(() => map.invalidateSize(), 250);
+        window.addEventListener("resize", () => {
+            syncInfoPanelState();
+            map.invalidateSize();
+        });
+    </script>
+</body>
+</html>
