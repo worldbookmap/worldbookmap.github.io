@@ -395,7 +395,7 @@
 
     <div class="list-container">
         <div class="list-header">
-            <h2>📚 전체 작품 목록</h2>
+            <h2>전체 작품 목록</h2>
             <button type="button" class="filter-reset-btn" id="reset-filter-btn">전체 보기</button>
         </div>
         <div class="filter-summary" id="filter-summary">모든 작품을 표시 중입니다.</div>
@@ -475,7 +475,9 @@
         let isMobileLayout = window.innerWidth <= 860;
         const filterSummary = document.getElementById("filter-summary");
         const resetFilterBtn = document.getElementById("reset-filter-btn");
+        const markerLayer = L.layerGroup().addTo(map);
         const markers = [];
+        const uniqueLocations = [];
         let currentFilter = { type: "all" };
         let selectedItemId = null;
         let selectedLocationKey = null;
@@ -499,6 +501,23 @@
             });
         }
 
+        function getNearestWrappedLng(baseLng, referenceLng = map.getCenter().lng) {
+            const worldOffset = Math.round((referenceLng - baseLng) / 360);
+            return baseLng + (worldOffset * 360);
+        }
+
+        function findBestMarkerByItemId(itemId) {
+            const candidates = markers.filter(marker => marker.itemId === itemId);
+            if (!candidates.length) return null;
+
+            const centerLng = map.getCenter().lng;
+            return candidates.reduce((best, current) => {
+                const bestDelta = Math.abs(best.getLatLng().lng - centerLng);
+                const currentDelta = Math.abs(current.getLatLng().lng - centerLng);
+                return currentDelta < bestDelta ? current : best;
+            });
+        }
+
         function setInfoPanelVisible(shouldShow) {
             if (shouldShow) {
                 infoPanel.classList.remove("is-collapsed");
@@ -519,7 +538,7 @@
             const firstItem = locationItems[0];
             let html = `
                 <button type="button" class="panel-close-btn" data-panel-close="true">닫기</button>
-                <h2 class="location-title">📍 ${firstItem.city}, ${getCountryFlag(firstItem.country)} ${firstItem.country}</h2>
+                <h2 class="location-title">${getCountryFlag(firstItem.country)} ${firstItem.city}, ${firstItem.country}</h2>
             `;
 
             locationItems.forEach(item => {
@@ -528,7 +547,7 @@
                 html += `
                     <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
                         <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
-                            <div class="book-title">📘 ${item.title}</div>
+                            <div class="book-title">${getCountryFlag(item.country)} ${item.title}</div>
                             <div class="book-author">저자: ${item.author}</div>
                         </div>
                         <div class="book-details">
@@ -633,26 +652,61 @@
             selectedLocationKey = getLocationKey(item);
             renderSelectedLocation(selectedLocationKey);
             setInfoPanelVisible(true);
-            map.panTo([item.lat, item.lng], { animate: true, duration: 0.7 });
+            const targetLng = getNearestWrappedLng(item.lng);
+            map.panTo([item.lat, targetLng], { animate: true, duration: 0.7 });
             highlightMarkersBySelection(selectedLocationKey);
         }
 
         function createMarkers() {
-            markers.length = 0;
             const seenLocations = new Set();
+            uniqueLocations.length = 0;
 
             literatureData.forEach(item => {
                 const locationKey = getLocationKey(item);
                 if (seenLocations.has(locationKey)) return;
 
                 seenLocations.add(locationKey);
-                const marker = L.marker([item.lat, item.lng]).addTo(map);
-                marker.bindTooltip(`${item.city} (${item.country})`);
-                marker.locationKey = locationKey;
-                marker.itemId = item.id;
-                marker.on("click", () => selectItem(item.id));
-                markers.push(marker);
+                uniqueLocations.push({
+                    locationKey,
+                    itemId: item.id,
+                    city: item.city,
+                    country: item.country,
+                    lat: item.lat,
+                    lng: item.lng
+                });
             });
+
+            updateWrappedMarkers();
+        }
+
+        function updateWrappedMarkers() {
+            markers.length = 0;
+            markerLayer.clearLayers();
+
+            if (!uniqueLocations.length) return;
+
+            const bounds = map.getBounds();
+            const west = bounds.getWest();
+            const east = bounds.getEast();
+
+            uniqueLocations.forEach(location => {
+                const minWrap = Math.floor((west - location.lng) / 360);
+                const maxWrap = Math.ceil((east - location.lng) / 360);
+
+                for (let wrapIndex = minWrap; wrapIndex <= maxWrap; wrapIndex += 1) {
+                    const wrappedLng = location.lng + (wrapIndex * 360);
+                    const marker = L.marker([location.lat, wrappedLng]).addTo(markerLayer);
+                    marker.bindTooltip(`${location.city} (${location.country})`);
+                    marker.locationKey = location.locationKey;
+                    marker.itemId = location.itemId;
+                    marker.on("click", () => selectItem(location.itemId));
+                    markers.push(marker);
+                }
+            });
+
+            if (selectedLocationKey) {
+                highlightMarkersBySelection(selectedLocationKey);
+            }
         }
 
         async function loadData() {
@@ -669,7 +723,7 @@
             const itemId = button?.dataset?.itemId;
             if (!itemId) return;
 
-            const marker = markers.find(item => item.itemId === itemId);
+            const marker = findBestMarkerByItemId(itemId);
             if (!marker) return;
 
             const workTitle = button.dataset.workTitle || "작품";
@@ -691,7 +745,7 @@
             const itemId = button?.dataset?.itemId;
             if (!itemId) return;
 
-            const marker = markers.find(item => item.itemId === itemId);
+            const marker = findBestMarkerByItemId(itemId);
             if (marker) {
                 marker.closePopup();
             }
@@ -783,9 +837,11 @@
         });
 
         setTimeout(() => map.invalidateSize(), 250);
+        map.on("moveend", updateWrappedMarkers);
         window.addEventListener("resize", () => {
             syncInfoPanelState();
             map.invalidateSize();
+            updateWrappedMarkers();
         });
     </script>
 </body>
