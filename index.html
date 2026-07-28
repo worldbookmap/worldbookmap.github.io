@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>독서 세계 지도</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.3.2/css/flag-icons.min.css" />
     <style>
         :root {
             color-scheme: light;
@@ -316,6 +317,12 @@
             color: #d8efeb;
         }
 
+        .country-flag {
+            vertical-align: -0.1em;
+            margin-right: 0.35rem;
+            border-radius: 2px;
+        }
+
         .work-line {
             display: flex;
             flex-wrap: wrap;
@@ -406,16 +413,27 @@
     <script>
         let literatureData = [];
 
-        const countryFlags = {
-            대한민국: "🇰🇷",
-            영국: "🇬🇧",
-            프랑스: "🇫🇷",
-            미국: "🇺🇸",
-            일본: "🇯🇵"
+        const countryFlagCodes = {
+            대한민국: "kr",
+            한국: "kr",
+            영국: "gb",
+            프랑스: "fr",
+            미국: "us",
+            일본: "jp",
+            대만: "tw",
+            이스라엘: "il",
+            독일: "de",
+            호주: "au",
+            포르투갈: "pt",
+            튀르키예: "tr",
+            터키: "tr"
         };
 
         function getCountryFlag(country) {
-            return countryFlags[country] || "🌏";
+            const normalizedCountry = (country || "").trim();
+            const code = countryFlagCodes[normalizedCountry];
+            if (!code) return "";
+            return `<span class="fi fi-${code} country-flag" aria-hidden="true"></span>`;
         }
 
         function getLocationKey(item) {
@@ -518,6 +536,20 @@
             });
         }
 
+        function findBestMarkerByLocationKey(locationKey) {
+            if (!locationKey) return null;
+
+            const candidates = markers.filter(marker => marker.locationKey === locationKey);
+            if (!candidates.length) return null;
+
+            const centerLng = map.getCenter().lng;
+            return candidates.reduce((best, current) => {
+                const bestDelta = Math.abs(best.getLatLng().lng - centerLng);
+                const currentDelta = Math.abs(current.getLatLng().lng - centerLng);
+                return currentDelta < bestDelta ? current : best;
+            });
+        }
+
         function setInfoPanelVisible(shouldShow) {
             if (shouldShow) {
                 infoPanel.classList.remove("is-collapsed");
@@ -538,7 +570,7 @@
             const firstItem = locationItems[0];
             let html = `
                 <button type="button" class="panel-close-btn" data-panel-close="true">닫기</button>
-                <h2 class="location-title">${getCountryFlag(firstItem.country)} ${firstItem.city}, ${firstItem.country}</h2>
+                <h2 class="location-title">${getCountryFlag(firstItem.country)}${firstItem.city}, ${firstItem.country}</h2>
             `;
 
             locationItems.forEach(item => {
@@ -547,7 +579,7 @@
                 html += `
                     <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
                         <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
-                            <div class="book-title">${getCountryFlag(item.country)} ${item.title}</div>
+                                <div class="book-title">${getCountryFlag(item.country)}${item.title}</div>
                             <div class="book-author">저자: ${item.author}</div>
                         </div>
                         <div class="book-details">
@@ -604,7 +636,7 @@
                 sortedCountries.forEach(([country, countryWorks]) => {
                     html += `
                         <div class="region-group">
-                            <div class="region-group-title">${getCountryFlag(country)} ${country}</div>
+                            <div class="region-group-title">${getCountryFlag(country)}${country}</div>
                             <ul class="simple-work-list">
                     `;
 
@@ -623,6 +655,7 @@
                                         data-filter="author"
                                         data-value="${item.author}"
                                         data-item-id="${item.id}"
+                                        data-location-key="${getLocationKey(item)}"
                                         data-work-title="${item.title}"
                                         data-work-author="${item.author}"
                                     >
@@ -647,6 +680,11 @@
         function selectItem(itemId) {
             const item = literatureData.find(entry => entry.id === itemId);
             if (!item) return;
+
+            if (selectedItemId === itemId && !infoPanel.classList.contains("is-collapsed")) {
+                setInfoPanelVisible(false);
+                return;
+            }
 
             selectedItemId = itemId;
             selectedLocationKey = getLocationKey(item);
@@ -723,7 +761,8 @@
             const itemId = button?.dataset?.itemId;
             if (!itemId) return;
 
-            const marker = findBestMarkerByItemId(itemId);
+            const locationKey = button?.dataset?.locationKey;
+            const marker = findBestMarkerByLocationKey(locationKey) || findBestMarkerByItemId(itemId);
             if (!marker) return;
 
             const workTitle = button.dataset.workTitle || "작품";
@@ -742,10 +781,9 @@
         }
 
         function hideLocationPopup(button) {
+            const locationKey = button?.dataset?.locationKey;
             const itemId = button?.dataset?.itemId;
-            if (!itemId) return;
-
-            const marker = findBestMarkerByItemId(itemId);
+            const marker = findBestMarkerByLocationKey(locationKey) || findBestMarkerByItemId(itemId);
             if (marker) {
                 marker.closePopup();
             }
@@ -841,7 +879,6 @@
         window.addEventListener("resize", () => {
             syncInfoPanelState();
             map.invalidateSize();
-            updateWrappedMarkers();
         });
     </script>
 </body>
