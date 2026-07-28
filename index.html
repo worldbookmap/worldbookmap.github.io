@@ -113,7 +113,7 @@
             padding-top: 1rem;
         }
 
-        .panel-toggle {
+        .panel-close-btn {
             position: absolute;
             top: 0.7rem;
             right: 0.7rem;
@@ -127,7 +127,7 @@
             z-index: 4;
         }
 
-        .panel-toggle:hover {
+        .panel-close-btn:hover {
             background: #317567;
         }
 
@@ -388,7 +388,7 @@
             <div id="map"></div>
         </div>
         <aside id="info-panel" class="is-collapsed">
-            <button type="button" class="panel-toggle" id="panel-toggle-btn">▶ 열기</button>
+            <button type="button" class="panel-close-btn" data-panel-close="true">닫기</button>
             <div class="panel-placeholder">지도 위의 핀을 클릭하면 해당 지역의 작품 목록이 이곳에 표시됩니다.</div>
         </aside>
     </div>
@@ -472,7 +472,6 @@
 
         const infoPanel = document.getElementById("info-panel");
         const allWorksList = document.getElementById("all-works-list");
-        const panelToggleBtn = document.getElementById("panel-toggle-btn");
         let isMobileLayout = window.innerWidth <= 860;
         const filterSummary = document.getElementById("filter-summary");
         const resetFilterBtn = document.getElementById("reset-filter-btn");
@@ -503,17 +502,14 @@
         function setInfoPanelVisible(shouldShow) {
             if (shouldShow) {
                 infoPanel.classList.remove("is-collapsed");
-                panelToggleBtn.textContent = "▼ 닫기";
             } else {
                 infoPanel.classList.add("is-collapsed");
-                panelToggleBtn.textContent = "▶ 열기";
             }
         }
 
         function syncInfoPanelState() {
             const mobile = window.innerWidth <= 860;
             isMobileLayout = mobile;
-            setInfoPanelVisible(true);
         }
 
         function renderSelectedLocation(locationKey) {
@@ -521,7 +517,10 @@
             if (!locationItems.length) return;
 
             const firstItem = locationItems[0];
-            let html = `<h2 class="location-title">📍 ${firstItem.city}, ${getCountryFlag(firstItem.country)} ${firstItem.country}</h2>`;
+            let html = `
+                <button type="button" class="panel-close-btn" data-panel-close="true">닫기</button>
+                <h2 class="location-title">📍 ${firstItem.city}, ${getCountryFlag(firstItem.country)} ${firstItem.country}</h2>
+            `;
 
             locationItems.forEach(item => {
                 const workKey = getWorkKey(item);
@@ -641,6 +640,7 @@
             selectedItemId = itemId;
             selectedLocationKey = getLocationKey(item);
             renderSelectedLocation(selectedLocationKey);
+            setInfoPanelVisible(true);
             map.panTo([item.lat, item.lng], { animate: true, duration: 0.7 });
             highlightMarkersBySelection(selectedLocationKey);
         }
@@ -671,7 +671,6 @@
             literatureData = normalizeLiteratureData(await response.json());
             createMarkers();
             renderAllWorksList();
-            selectItem(literatureData[0]?.id || null);
         }
 
         function showLocationPopup(button) {
@@ -737,6 +736,12 @@
         }, true);
 
         infoPanel.addEventListener("click", (event) => {
+            const closeButton = event.target.closest("button[data-panel-close='true']");
+            if (closeButton) {
+                setInfoPanelVisible(false);
+                return;
+            }
+
             const toggleButton = event.target.closest(".book-item-toggle");
             if (!toggleButton) return;
 
@@ -777,11 +782,6 @@
         resetFilterBtn.addEventListener("click", () => {
             currentFilter = { type: "all" };
             renderAllWorksList();
-        });
-
-        panelToggleBtn.addEventListener("click", () => {
-            const isCollapsed = infoPanel.classList.contains("is-collapsed");
-            setInfoPanelVisible(!isCollapsed);
         });
 
         syncInfoPanelState();
