@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>데이터 편집기</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0e1e1f;
+            --panel: #13292a;
+            --panel-2: #183536;
+            --text: #f4f7f7;
+            --muted: #a9c7c4;
+            --accent: #eaa521;
+            --accent-soft: #f5c96a;
+            --border: #2d4f4f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Nanum Myeongjo", "Times New Roman", serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 8px;
+            color: var(--accent-soft);
+        }
+
+        p {
+            margin: 0;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        button:hover { transform: translateY(-1px); }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #111;
+            font-weight: 700;
+        }
+
+        .btn-secondary {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 560px;
+            resize: vertical;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #0b1718;
+            color: #f7fbfa;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .hint {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .status {
+            min-height: 22px;
+            color: var(--accent-soft);
+            font-size: 0.95rem;
+            margin-top: 10px;
+        }
+
+        .inline-code {
+            display: inline-block;
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            background: rgba(234, 165, 33, 0.16);
+            color: var(--accent-soft);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="card">
+            <h1>데이터 편집기</h1>
+            <p>이 페이지에서 책 지도에 필요한 데이터를 입력하고, JSON 파일로 내려받을 수 있습니다.</p>
+            <div class="toolbar">
+                <button type="button" class="btn-primary" id="load-example-btn">예시 데이터 불러오기</button>
+                <button type="button" class="btn-secondary" id="load-file-btn">기존 JSON 불러오기</button>
+                <button type="button" class="btn-secondary" id="validate-btn">JSON 검증</button>
+                <button type="button" class="btn-primary" id="save-btn">저장하기</button>
+            </div>
+            <input type="file" id="json-file-input" accept="application/json" hidden />
+            <div class="status" id="status-message">빈 JSON 배열로 시작합니다.</div>
+        </section>
+
+        <section class="card">
+            <textarea id="json-editor" spellcheck="false"></textarea>
+            <div class="hint">
+                형식은 <span class="inline-code">[{ "id": "seoul-광장", "country": "대한민국", "city": "서울", "lat": 37.5665, "lng": 126.9780, "title": "광장", "author": "최인훈", "desc": "설명" }]</span> 형태로 입력하면 됩니다.
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const editor = document.getElementById("json-editor");
+        const statusMessage = document.getElementById("status-message");
+        const fileInput = document.getElementById("json-file-input");
+
+        function setStatus(message) {
+            statusMessage.textContent = message;
+        }
+
+        function getDefaultJson() {
+            return `[
+  {
+    "id": "seoul-광장",
+    "country": "대한민국",
+    "city": "서울",
+    "lat": 37.5665,
+    "lng": 126.9780,
+    "title": "광장",
+    "author": "최인훈",
+    "desc": "서울을 배경으로 한 현대문학의 대표작입니다."
+  }
+]`;
+        }
+
+        function populateExample() {
+            editor.value = getDefaultJson();
+            setStatus("예시 데이터로 채웠습니다.");
+        }
+
+        function validateJson() {
+            try {
+                const parsed = JSON.parse(editor.value);
+                if (!Array.isArray(parsed)) {
+                    throw new Error("최상위는 배열이어야 합니다.");
+                }
+                setStatus(`JSON 검증 완료: ${parsed.length}개 작품 데이터입니다.`);
+                return parsed;
+            } catch (error) {
+                setStatus(`JSON 검증 실패: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function saveJson() {
+            const parsed = validateJson();
+            if (!parsed) return;
+
+            const jsonText = JSON.stringify(parsed, null, 2);
+            const blob = new Blob([jsonText], { type: "application/json" });
+
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: "data.json",
+                        types: [{ description: "JSON Files", accept: { "application/json": [".json"] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    setStatus("파일에 저장했습니다.");
+                    return;
+                } catch (error) {
+                    if (error?.name === "AbortError") {
+                        setStatus("저장을 취소했습니다.");
+                        return;
+                    }
+                }
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "data.json";
+            link.click();
+            URL.revokeObjectURL(url);
+            setStatus("브라우저 다운로드로 저장했습니다.");
+        }
+
+        async function loadExistingJson() {
+            try {
+                const response = await fetch("data.json", { cache: "no-store" });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                editor.value = text;
+                setStatus("현재 data.json 내용을 불러왔습니다.");
+            } catch (error) {
+                setStatus(`현재 data.json을 불러오지 못했습니다: ${error.message}`);
+            }
+        }
+
+        document.getElementById("load-example-btn").addEventListener("click", populateExample);
+        document.getElementById("validate-btn").addEventListener("click", validateJson);
+        document.getElementById("save-btn").addEventListener("click", saveJson);
+        document.getElementById("load-file-btn").addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                editor.value = text;
+                setStatus(`${file.name} 파일을 불러왔습니다.`);
+            } catch (error) {
+                setStatus(`파일 읽기 실패: ${error.message}`);
+            }
+        });
+
+        populateExample();
+    </script>
+</body>
+</html>

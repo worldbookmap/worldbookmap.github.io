@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>문학 세계 지도</title>
+    <title>독서 세계 지도</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <style>
         :root {
@@ -22,8 +22,8 @@
 
         body {
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f5f9;
-            color: #233142;
+            background: #0a1617;
+            color: #f3f7f7;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,40 +32,53 @@
         }
 
         header {
-            background: linear-gradient(135deg, #1f3c88, #355c7d);
+            background: #0e1e1f;
             color: white;
             padding: 1.2rem 1.5rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
 
         header h1 {
-            font-size: 1.4rem;
-            margin-bottom: 0.25rem;
+            font-family: "Nanum Myeongjo", "Times New Roman", serif;
+            font-size: 2.1rem;
+            line-height: 1.25;
+            margin-bottom: 0.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
         }
 
         header p {
-            font-size: 0.95rem;
-            opacity: 0.9;
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+
+        .header-title-accent {
+            color: #e6f7f1;
+        }
+
+        .header-title-strong {
+            color: #eaa521;
+            font-weight: 900;
         }
 
         .main-container {
             display: flex;
             gap: 1rem;
-            padding: 1rem;
+            padding: 1rem 1rem 1.5rem;
             min-height: 0;
-            min-height: 520px;
+            min-height: 620px;
             flex-wrap: nowrap;
             align-items: flex-start;
         }
 
         #map-container {
             flex: 2 1 0;
-            min-height: 420px;
-            height: 540px;
+            min-height: 480px;
+            height: 580px;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-            background: #e7ecf3;
+            background: #e4f7f2;
             position: relative;
             z-index: 1;
         }
@@ -73,7 +86,7 @@
         #map {
             width: 100%;
             height: 100%;
-            min-height: 420px;
+            min-height: 480px;
         }
 
         #info-panel {
@@ -106,7 +119,7 @@
             right: 0.7rem;
             border: none;
             border-radius: 999px;
-            background: #2563eb;
+            background: #3f8f7a;
             color: white;
             padding: 0.4rem 0.7rem;
             font-size: 0.85rem;
@@ -115,20 +128,20 @@
         }
 
         .panel-toggle:hover {
-            background: #1d4ed8;
+            background: #317567;
         }
 
         .location-title {
-            color: #1d4ed8;
+            color: #3f6b3f;
             font-size: 1.2rem;
             margin-bottom: 0.8rem;
-            border-bottom: 2px solid #93c5fd;
+            border-bottom: 2px solid #9bd5c4;
             padding-bottom: 0.4rem;
         }
 
         .book-item {
-            background: #f8fafc;
-            border-left: 4px solid #3b82f6;
+            background: #f7fdfb;
+            border-left: 4px solid #63b79a;
             border-radius: 0 8px 8px 0;
             padding: 0.85rem;
             margin-bottom: 0.8rem;
@@ -154,7 +167,7 @@
         }
 
         .book-item.is-expanded .book-title {
-            color: #1d4ed8;
+            color: #3f6b3f;
         }
 
         .book-title {
@@ -176,8 +189,8 @@
         }
 
         .list-container {
-            margin: 0 1rem 1rem;
-            background: white;
+            margin: 0 1rem 1.5rem;
+            background: #0e1e1f;
             border-radius: 12px;
             padding: 1rem 1.1rem;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
@@ -187,7 +200,7 @@
 
         .list-container h2 {
             font-size: 1.1rem;
-            color: #233142;
+            color: #f2f7f6;
         }
 
         .list-header {
@@ -200,14 +213,14 @@
 
         .filter-summary {
             font-size: 0.9rem;
-            color: #64748b;
+            color: #b9d6d4;
             margin-bottom: 0.8rem;
         }
 
         .filter-reset-btn {
             border: none;
             border-radius: 999px;
-            background: #2563eb;
+            background: #3f8f7a;
             color: white;
             padding: 0.45rem 0.8rem;
             font-size: 0.9rem;
@@ -215,7 +228,7 @@
         }
 
         .filter-reset-btn:hover {
-            background: #1d4ed8;
+            background: #317567;
         }
 
         .all-works-grid {
@@ -225,16 +238,16 @@
         }
 
         .region-group {
-            border: 1px solid #e2e8f0;
+            border: 1px solid #1d2f30;
             border-radius: 10px;
-            background: #f8fafc;
+            background: #0f2324;
             padding: 0.8rem;
         }
 
         .region-group-title {
             font-size: 1rem;
             font-weight: 700;
-            color: #1d4ed8;
+            color: #f2f7f6;
             margin-bottom: 0.6rem;
         }
 
@@ -242,14 +255,14 @@
             margin-left: 0.4rem;
             margin-bottom: 0.7rem;
             padding: 0.6rem 0.7rem;
-            border-left: 3px solid #93c5fd;
-            background: white;
+            border-left: 3px solid #2f6c6d;
+            background: #142a2b;
             border-radius: 0 8px 8px 0;
         }
 
         .city-group-title {
             font-weight: 700;
-            color: #334155;
+            color: #dcefe9;
             margin-bottom: 0.45rem;
         }
 
@@ -257,6 +270,50 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 0.8rem;
+        }
+
+        .simple-work-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        .simple-work-item {
+            display: inline-flex;
+        }
+
+        .simple-work-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            border: 1px solid #2f4f50;
+            border-radius: 999px;
+            background: #173536;
+            color: #f3f9f8;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.84rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+            transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+
+        .simple-work-link:hover {
+            background: #214647;
+            color: #ffe1b0;
+            transform: translateY(-1px);
+        }
+
+        .city-chip {
+            font-weight: 700;
+            color: #eaa521;
+        }
+
+        .title-chip {
+            color: #d8efeb;
         }
 
         .work-line {
@@ -268,17 +325,17 @@
         }
 
         .chip {
-            border: 1px solid #bfdbfe;
+            border: 1px solid #cfe3c5;
             border-radius: 999px;
-            background: #eff6ff;
-            color: #1d4ed8;
+            background: #eefaf6;
+            color: #2f6f62;
             padding: 0.25rem 0.6rem;
             font-size: 0.83rem;
             cursor: pointer;
         }
 
         .chip:hover {
-            background: #dbeafe;
+            background: #dcf4eb;
         }
 
         .arrow {
@@ -322,8 +379,8 @@
 </head>
 <body>
     <header>
-        <h1>🗺️ 세계 문학 지도 여행</h1>
-        <p>지역별로 대표 작품을 연결해 보는 웹 앱입니다.</p>
+        <h1><span class="header-title-accent">그 지역에선</span> <span class="header-title-strong">그 지역 책</span>을 읽어보기</h1>
+        <p>세상에서 가장 사치스럽고 우아한 놀이</p>
     </header>
 
     <div class="main-container">
@@ -361,6 +418,48 @@
             return countryFlags[country] || "🌏";
         }
 
+        function getLocationKey(item) {
+            return `${item.country}::${item.city}`;
+        }
+
+        function normalizeLiteratureData(rawData) {
+            if (!Array.isArray(rawData)) return [];
+
+            const normalized = [];
+            rawData.forEach((entry) => {
+                if (entry && Array.isArray(entry.works)) {
+                    entry.works.forEach((work, workIndex) => {
+                        normalized.push({
+                            id: work.id || `${entry.id || entry.city || "location"}-${workIndex + 1}`,
+                            country: entry.country,
+                            city: entry.city,
+                            lat: entry.lat,
+                            lng: entry.lng,
+                            title: work.title,
+                            author: work.author,
+                            desc: work.desc
+                        });
+                    });
+                    return;
+                }
+
+                if (!entry || !entry.country || !entry.city || !entry.title) return;
+
+                normalized.push({
+                    id: entry.id || `${entry.country}-${entry.city}-${entry.title}-${entry.author || "work"}`.replace(/[^a-zA-Z0-9가-힣]+/g, "-").toLowerCase(),
+                    country: entry.country,
+                    city: entry.city,
+                    lat: entry.lat,
+                    lng: entry.lng,
+                    title: entry.title,
+                    author: entry.author,
+                    desc: entry.desc
+                });
+            });
+
+            return normalized;
+        }
+
         const map = L.map("map", {
             zoomControl: true,
             attributionControl: true
@@ -379,16 +478,21 @@
         const resetFilterBtn = document.getElementById("reset-filter-btn");
         const markers = [];
         let currentFilter = { type: "all" };
-        let selectedLocationId = "seoul";
+        let selectedItemId = null;
+        let selectedLocationKey = null;
         const expandedWorkKeys = new Set();
 
         function getWorkKey(work) {
-            return `${work.location.country}::${work.location.city}::${work.title}::${work.author}`;
+            return work.id || `${work.country}::${work.city}::${work.title}::${work.author}`;
         }
 
-        function highlightMarkersBySelection(locationId) {
+        function getLocationItems(locationKey) {
+            return literatureData.filter(item => getLocationKey(item) === locationKey);
+        }
+
+        function highlightMarkersBySelection(locationKey) {
             markers.forEach(marker => {
-                const isActive = marker.locationId === locationId;
+                const isActive = marker.locationKey === locationKey;
                 marker.setOpacity(isActive ? 1 : 0.35);
                 if (marker.setZIndexOffset) {
                     marker.setZIndexOffset(isActive ? 1000 : 0);
@@ -412,33 +516,37 @@
             setInfoPanelVisible(true);
         }
 
-        function renderLocationInfo(location) {
-            let html = `<h2 class="location-title">📍 ${location.city}, ${getCountryFlag(location.country)} ${location.country}</h2>`;
-            location.works.forEach(work => {
-                const workKey = getWorkKey({ ...work, location });
+        function renderSelectedLocation(locationKey) {
+            const locationItems = getLocationItems(locationKey);
+            if (!locationItems.length) return;
+
+            const firstItem = locationItems[0];
+            let html = `<h2 class="location-title">📍 ${firstItem.city}, ${getCountryFlag(firstItem.country)} ${firstItem.country}</h2>`;
+
+            locationItems.forEach(item => {
+                const workKey = getWorkKey(item);
                 const isExpanded = expandedWorkKeys.has(workKey);
                 html += `
                     <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
                         <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
-                            <div class="book-title">📘 ${work.title}</div>
-                            <div class="book-author">저자: ${work.author}</div>
+                            <div class="book-title">📘 ${item.title}</div>
+                            <div class="book-author">저자: ${item.author}</div>
                         </div>
                         <div class="book-details">
-                            <div class="book-desc">${work.desc}</div>
+                            <div class="book-desc">${item.desc}</div>
                         </div>
                     </div>
                 `;
             });
+
             infoPanel.innerHTML = html;
         }
 
         function getFilteredWorks() {
-            const allWorks = literatureData.flatMap(location =>
-                location.works.map(work => ({ ...work, location }))
-            );
+            const allWorks = [...literatureData];
 
             if (currentFilter.type === "region") {
-                return allWorks.filter(item => item.location.city === currentFilter.value);
+                return allWorks.filter(item => item.city === currentFilter.value);
             }
 
             if (currentFilter.type === "author") {
@@ -465,18 +573,20 @@
             if (!works.length) {
                 html = '<div class="empty-state">표시할 작품이 없습니다.</div>';
             } else {
-                const groupedByCountry = works.reduce((acc, work) => {
-                    if (!acc[work.location.country]) {
-                        acc[work.location.country] = {};
+                const groupedByCountry = works.reduce((acc, item) => {
+                    if (!acc[item.country]) {
+                        acc[item.country] = {};
                     }
-                    if (!acc[work.location.country][work.location.city]) {
-                        acc[work.location.country][work.location.city] = [];
+                    if (!acc[item.country][item.city]) {
+                        acc[item.country][item.city] = [];
                     }
-                    acc[work.location.country][work.location.city].push(work);
+                    acc[item.country][item.city].push(item);
                     return acc;
                 }, {});
 
-                Object.entries(groupedByCountry).forEach(([country, cities]) => {
+                const sortedCountries = Object.entries(groupedByCountry).sort(([a], [b]) => a.localeCompare(b, "ko"));
+
+                sortedCountries.forEach(([country, cities]) => {
                     html += `
                         <div class="region-group">
                             <div class="region-group-title">${getCountryFlag(country)} ${country}</div>
@@ -486,33 +596,30 @@
                         html += `
                             <div class="city-group">
                                 <div class="city-group-title">🏙️ ${city}</div>
-                                <div class="region-group-items">
+                                <ul class="simple-work-list">
                         `;
 
-                        cityWorks.forEach(work => {
-                            const workKey = getWorkKey(work);
-                            const isExpanded = expandedWorkKeys.has(workKey);
+                        cityWorks.forEach(item => {
                             html += `
-                                <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
-                                    <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
-                                        <div class="work-line">
-                                            <button type="button" class="chip" data-filter="region" data-value="${work.location.city}">${work.location.city}</button>
-                                            <span class="arrow">›</span>
-                                            <span class="work-title">${work.title}</span>
-                                            <span class="arrow">(</span>
-                                            <button type="button" class="chip" data-filter="author" data-value="${work.author}">저자: ${work.author}</button>
-                                            <span class="arrow">)</span>
-                                        </div>
-                                    </div>
-                                    <div class="book-details">
-                                        <div class="book-desc">${work.desc}</div>
-                                    </div>
-                                </div>
+                                <li class="simple-work-item">
+                                    <button
+                                        type="button"
+                                        class="simple-work-link"
+                                        data-filter="author"
+                                        data-value="${item.author}"
+                                        data-item-id="${item.id}"
+                                        data-work-title="${item.title}"
+                                        data-work-author="${item.author}"
+                                    >
+                                        <span class="city-chip">${item.city}</span>
+                                        <span class="title-chip">${item.title}</span>
+                                    </button>
+                                </li>
                             `;
                         });
 
                         html += `
-                                </div>
+                                </ul>
                             </div>
                         `;
                     });
@@ -527,23 +634,31 @@
             updateFilterSummary();
         }
 
-        function selectLocation(locationId) {
-            const location = literatureData.find(item => item.id === locationId);
-            if (!location) return;
+        function selectItem(itemId) {
+            const item = literatureData.find(entry => entry.id === itemId);
+            if (!item) return;
 
-            selectedLocationId = locationId;
-            renderLocationInfo(location);
-            map.panTo([location.lat, location.lng], { animate: true, duration: 0.7 });
-            highlightMarkersBySelection(locationId);
+            selectedItemId = itemId;
+            selectedLocationKey = getLocationKey(item);
+            renderSelectedLocation(selectedLocationKey);
+            map.panTo([item.lat, item.lng], { animate: true, duration: 0.7 });
+            highlightMarkersBySelection(selectedLocationKey);
         }
 
         function createMarkers() {
             markers.length = 0;
-            literatureData.forEach(location => {
-                const marker = L.marker([location.lat, location.lng]).addTo(map);
-                marker.bindTooltip(`${location.city} (${location.country})`);
-                marker.locationId = location.id;
-                marker.on("click", () => selectLocation(location.id));
+            const seenLocations = new Set();
+
+            literatureData.forEach(item => {
+                const locationKey = getLocationKey(item);
+                if (seenLocations.has(locationKey)) return;
+
+                seenLocations.add(locationKey);
+                const marker = L.marker([item.lat, item.lng]).addTo(map);
+                marker.bindTooltip(`${item.city} (${item.country})`);
+                marker.locationKey = locationKey;
+                marker.itemId = item.id;
+                marker.on("click", () => selectItem(item.id));
                 markers.push(marker);
             });
         }
@@ -553,49 +668,73 @@
             if (!response.ok) {
                 throw new Error(`데이터 로드 실패: ${response.status} ${response.statusText}`);
             }
-            literatureData = await response.json();
+            literatureData = normalizeLiteratureData(await response.json());
             createMarkers();
             renderAllWorksList();
-            selectLocation(selectedLocationId);
+            selectItem(literatureData[0]?.id || null);
+        }
+
+        function showLocationPopup(button) {
+            const itemId = button?.dataset?.itemId;
+            if (!itemId) return;
+
+            const marker = markers.find(item => item.itemId === itemId);
+            if (!marker) return;
+
+            const workTitle = button.dataset.workTitle || "작품";
+            const workAuthor = button.dataset.workAuthor || "작가";
+            const item = literatureData.find(entry => entry.id === itemId);
+            const popupContent = `
+                <div style="font-size: 0.86rem; line-height: 1.5; max-width: 220px;">
+                    <strong>${item?.city || "지역"}</strong><br />
+                    <div style="margin: 0.25rem 0 0.35rem; font-weight: 700; color: #14213d;">${workTitle}</div>
+                    <div style="color:#64748b; margin-bottom: 0.35rem;">${workAuthor}</div>
+                    <div style="color:#334155;">${item?.desc || "설명이 준비되어 있습니다."}</div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent).openPopup();
+        }
+
+        function hideLocationPopup(button) {
+            const itemId = button?.dataset?.itemId;
+            if (!itemId) return;
+
+            const marker = markers.find(item => item.itemId === itemId);
+            if (marker) {
+                marker.closePopup();
+            }
         }
 
         allWorksList.addEventListener("click", (event) => {
             const button = event.target.closest("button[data-filter]");
             if (button) {
-                if (button.dataset.filter === "region") {
-                    const targetLocation = literatureData.find(item => item.city === button.dataset.value);
-                    if (targetLocation) {
-                        currentFilter = {
-                            type: "region",
-                            value: button.dataset.value
-                        };
-                        renderAllWorksList();
-                        selectLocation(targetLocation.id);
-                        return;
-                    }
-                }
-
                 currentFilter = {
                     type: button.dataset.filter,
                     value: button.dataset.value
                 };
                 renderAllWorksList();
+
+                if (button.dataset.itemId) {
+                    selectItem(button.dataset.itemId);
+                }
                 return;
             }
-
-            const toggleButton = event.target.closest(".book-item-toggle");
-            if (toggleButton) {
-                const workKey = toggleButton.dataset.workKey;
-                if (workKey) {
-                    if (expandedWorkKeys.has(workKey)) {
-                        expandedWorkKeys.delete(workKey);
-                    } else {
-                        expandedWorkKeys.add(workKey);
-                    }
-                    renderAllWorksList();
-                }
-            }
         });
+
+        allWorksList.addEventListener("mouseenter", (event) => {
+            const button = event.target.closest("button[data-item-id]");
+            if (button) {
+                showLocationPopup(button);
+            }
+        }, true);
+
+        allWorksList.addEventListener("mouseleave", (event) => {
+            const button = event.target.closest("button[data-item-id]");
+            if (button) {
+                hideLocationPopup(button);
+            }
+        }, true);
 
         infoPanel.addEventListener("click", (event) => {
             const toggleButton = event.target.closest(".book-item-toggle");
@@ -610,9 +749,8 @@
                 expandedWorkKeys.add(workKey);
             }
 
-            const location = literatureData.find(item => item.id === selectedLocationId);
-            if (location) {
-                renderLocationInfo(location);
+            if (selectedLocationKey) {
+                renderSelectedLocation(selectedLocationKey);
             }
         });
 
@@ -631,27 +769,9 @@
                 expandedWorkKeys.add(workKey);
             }
 
-            const location = literatureData.find(item => item.id === selectedLocationId);
-            if (location) {
-                renderLocationInfo(location);
+            if (selectedLocationKey) {
+                renderSelectedLocation(selectedLocationKey);
             }
-        });
-
-        allWorksList.addEventListener("keydown", (event) => {
-            const toggleButton = event.target.closest(".book-item-toggle");
-            if (!toggleButton) return;
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-
-            const workKey = toggleButton.dataset.workKey;
-            if (!workKey) return;
-
-            if (expandedWorkKeys.has(workKey)) {
-                expandedWorkKeys.delete(workKey);
-            } else {
-                expandedWorkKeys.add(workKey);
-            }
-            renderAllWorksList();
         });
 
         resetFilterBtn.addEventListener("click", () => {
