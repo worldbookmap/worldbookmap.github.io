@@ -134,6 +134,29 @@
             margin-bottom: 0.8rem;
         }
 
+        .book-item-toggle {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 0;
+            text-align: left;
+            cursor: pointer;
+            display: block;
+        }
+
+        .book-details {
+            display: none;
+            margin-top: 0.55rem;
+        }
+
+        .book-item.is-expanded .book-details {
+            display: block;
+        }
+
+        .book-item.is-expanded .book-title {
+            color: #1d4ed8;
+        }
+
         .book-title {
             font-weight: 700;
             color: #14213d;
@@ -324,64 +347,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
-        // 나중에 XML로 분리할 수 있도록, 우선 단일 파일 안에 데이터 구조를 저장합니다.
-        const literatureData = [
-            {
-                id: "seoul",
-                country: "대한민국",
-                city: "서울",
-                lat: 37.5665,
-                lng: 126.9780,
-                works: [
-                    { title: "광장", author: "최인훈", desc: "분단 현실 속에서 지식인이 겪는 고뇌와 갈등을 그린 한국 현대소설의 대표작입니다." },
-                    { title: "날개", author: "이상", desc: "서울의 도시 감각과 자아의 분열을 실험적인 문체로 보여주는 작품입니다." }
-                ]
-            },
-            {
-                id: "london",
-                country: "영국",
-                city: "런던",
-                lat: 51.5074,
-                lng: -0.1278,
-                works: [
-                    { title: "위대한 유산", author: "찰스 디킨스", desc: "산업혁명기 런던을 배경으로 한 성장 서사와 인간성 회복을 그린 작품입니다." },
-                    { title: "런던 스케치", author: "찰스 디킨스", desc: "19세기 런던의 생활을 섬세하게 담아낸 에세이집입니다." }
-                ]
-            },
-            {
-                id: "paris",
-                country: "프랑스",
-                city: "파리",
-                lat: 48.8566,
-                lng: 2.3522,
-                works: [
-                    { title: "레 미제라블", author: "빅토르 위고", desc: "파리를 중심으로 한 인간의 구원과 사회의 변화를 다룬 대서사시입니다." },
-                    { title: "잃어버린 시간을 찾아서", author: "마르셀 프루스트", desc: "기억과 자아를 깊이 탐구하는 파리의 사교계와 정서를 다룬 작품입니다." }
-                ]
-            },
-            {
-                id: "newyork",
-                country: "미국",
-                city: "뉴욕",
-                lat: 40.7128,
-                lng: -74.0060,
-                works: [
-                    { title: "위대한 개츠비", author: "F. 스콧 피츠제럴드", desc: "1920년대 뉴욕의 화려함과 허상을 통해 아메리칸 드림의 모순을 보여줍니다." },
-                    { title: "호밀밭의 파수꾼", author: "J.D. 샐린저", desc: "뉴욕의 거리에서 방황하는 청년의 시선으로 기성 세대의 위선을 비판합니다." }
-                ]
-            },
-            {
-                id: "tokyo",
-                country: "일본",
-                city: "도쿄",
-                lat: 35.6762,
-                lng: 139.6503,
-                works: [
-                    { title: "노인의 바다", author: "헤밍웨이", desc: "도쿄의 도시성에 대한 인상과 인간의 고독을 다룬 작품입니다." },
-                    { title: "바람과 함께 사라지다", author: "마가렛 미첼", desc: "도쿄의 현대적 긴장감과 삶의 변화감을 느끼게 하는 서사입니다." }
-                ]
-            }
-        ];
+        let literatureData = [];
 
         const countryFlags = {
             대한민국: "🇰🇷",
@@ -413,6 +379,12 @@
         const resetFilterBtn = document.getElementById("reset-filter-btn");
         const markers = [];
         let currentFilter = { type: "all" };
+        let selectedLocationId = "seoul";
+        const expandedWorkKeys = new Set();
+
+        function getWorkKey(work) {
+            return `${work.location.country}::${work.location.city}::${work.title}::${work.author}`;
+        }
 
         function highlightMarkersBySelection(locationId) {
             markers.forEach(marker => {
@@ -443,11 +415,17 @@
         function renderLocationInfo(location) {
             let html = `<h2 class="location-title">📍 ${location.city}, ${getCountryFlag(location.country)} ${location.country}</h2>`;
             location.works.forEach(work => {
+                const workKey = getWorkKey({ ...work, location });
+                const isExpanded = expandedWorkKeys.has(workKey);
                 html += `
-                    <div class="book-item">
-                        <div class="book-title">📘 ${work.title}</div>
-                        <div class="book-author">저자: ${work.author}</div>
-                        <div class="book-desc">${work.desc}</div>
+                    <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
+                        <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
+                            <div class="book-title">📘 ${work.title}</div>
+                            <div class="book-author">저자: ${work.author}</div>
+                        </div>
+                        <div class="book-details">
+                            <div class="book-desc">${work.desc}</div>
+                        </div>
                     </div>
                 `;
             });
@@ -512,17 +490,23 @@
                         `;
 
                         cityWorks.forEach(work => {
+                            const workKey = getWorkKey(work);
+                            const isExpanded = expandedWorkKeys.has(workKey);
                             html += `
-                                <div class="book-item">
-                                    <div class="work-line">
-                                        <button type="button" class="chip" data-filter="region" data-value="${work.location.city}">${work.location.city}</button>
-                                        <span class="arrow">›</span>
-                                        <span class="work-title">${work.title}</span>
-                                        <span class="arrow">(</span>
-                                        <button type="button" class="chip" data-filter="author" data-value="${work.author}">저자: ${work.author}</button>
-                                        <span class="arrow">)</span>
+                                <div class="book-item ${isExpanded ? "is-expanded" : "is-collapsed"}">
+                                    <div class="book-item-toggle" data-work-key="${workKey}" role="button" tabindex="0">
+                                        <div class="work-line">
+                                            <button type="button" class="chip" data-filter="region" data-value="${work.location.city}">${work.location.city}</button>
+                                            <span class="arrow">›</span>
+                                            <span class="work-title">${work.title}</span>
+                                            <span class="arrow">(</span>
+                                            <button type="button" class="chip" data-filter="author" data-value="${work.author}">저자: ${work.author}</button>
+                                            <span class="arrow">)</span>
+                                        </div>
                                     </div>
-                                    <div class="book-desc">${work.desc}</div>
+                                    <div class="book-details">
+                                        <div class="book-desc">${work.desc}</div>
+                                    </div>
                                 </div>
                             `;
                         });
@@ -547,40 +531,126 @@
             const location = literatureData.find(item => item.id === locationId);
             if (!location) return;
 
+            selectedLocationId = locationId;
             renderLocationInfo(location);
             map.panTo([location.lat, location.lng], { animate: true, duration: 0.7 });
             highlightMarkersBySelection(locationId);
         }
 
-        literatureData.forEach(location => {
-            const marker = L.marker([location.lat, location.lng]).addTo(map);
-            marker.bindTooltip(`${location.city} (${location.country})`);
-            marker.locationId = location.id;
-            marker.on("click", () => selectLocation(location.id));
-            markers.push(marker);
-        });
+        function createMarkers() {
+            markers.length = 0;
+            literatureData.forEach(location => {
+                const marker = L.marker([location.lat, location.lng]).addTo(map);
+                marker.bindTooltip(`${location.city} (${location.country})`);
+                marker.locationId = location.id;
+                marker.on("click", () => selectLocation(location.id));
+                markers.push(marker);
+            });
+        }
+
+        async function loadData() {
+            const response = await fetch("data.json");
+            if (!response.ok) {
+                throw new Error(`데이터 로드 실패: ${response.status} ${response.statusText}`);
+            }
+            literatureData = await response.json();
+            createMarkers();
+            renderAllWorksList();
+            selectLocation(selectedLocationId);
+        }
 
         allWorksList.addEventListener("click", (event) => {
             const button = event.target.closest("button[data-filter]");
-            if (!button) return;
-
-            if (button.dataset.filter === "region") {
-                const targetLocation = literatureData.find(item => item.city === button.dataset.value);
-                if (targetLocation) {
-                    currentFilter = {
-                        type: "region",
-                        value: button.dataset.value
-                    };
-                    renderAllWorksList();
-                    selectLocation(targetLocation.id);
-                    return;
+            if (button) {
+                if (button.dataset.filter === "region") {
+                    const targetLocation = literatureData.find(item => item.city === button.dataset.value);
+                    if (targetLocation) {
+                        currentFilter = {
+                            type: "region",
+                            value: button.dataset.value
+                        };
+                        renderAllWorksList();
+                        selectLocation(targetLocation.id);
+                        return;
+                    }
                 }
+
+                currentFilter = {
+                    type: button.dataset.filter,
+                    value: button.dataset.value
+                };
+                renderAllWorksList();
+                return;
             }
 
-            currentFilter = {
-                type: button.dataset.filter,
-                value: button.dataset.value
-            };
+            const toggleButton = event.target.closest(".book-item-toggle");
+            if (toggleButton) {
+                const workKey = toggleButton.dataset.workKey;
+                if (workKey) {
+                    if (expandedWorkKeys.has(workKey)) {
+                        expandedWorkKeys.delete(workKey);
+                    } else {
+                        expandedWorkKeys.add(workKey);
+                    }
+                    renderAllWorksList();
+                }
+            }
+        });
+
+        infoPanel.addEventListener("click", (event) => {
+            const toggleButton = event.target.closest(".book-item-toggle");
+            if (!toggleButton) return;
+
+            const workKey = toggleButton.dataset.workKey;
+            if (!workKey) return;
+
+            if (expandedWorkKeys.has(workKey)) {
+                expandedWorkKeys.delete(workKey);
+            } else {
+                expandedWorkKeys.add(workKey);
+            }
+
+            const location = literatureData.find(item => item.id === selectedLocationId);
+            if (location) {
+                renderLocationInfo(location);
+            }
+        });
+
+        infoPanel.addEventListener("keydown", (event) => {
+            const toggleButton = event.target.closest(".book-item-toggle");
+            if (!toggleButton) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+
+            const workKey = toggleButton.dataset.workKey;
+            if (!workKey) return;
+
+            if (expandedWorkKeys.has(workKey)) {
+                expandedWorkKeys.delete(workKey);
+            } else {
+                expandedWorkKeys.add(workKey);
+            }
+
+            const location = literatureData.find(item => item.id === selectedLocationId);
+            if (location) {
+                renderLocationInfo(location);
+            }
+        });
+
+        allWorksList.addEventListener("keydown", (event) => {
+            const toggleButton = event.target.closest(".book-item-toggle");
+            if (!toggleButton) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+
+            const workKey = toggleButton.dataset.workKey;
+            if (!workKey) return;
+
+            if (expandedWorkKeys.has(workKey)) {
+                expandedWorkKeys.delete(workKey);
+            } else {
+                expandedWorkKeys.add(workKey);
+            }
             renderAllWorksList();
         });
 
@@ -595,8 +665,10 @@
         });
 
         syncInfoPanelState();
-        renderAllWorksList();
-        selectLocation("seoul");
+        loadData().catch(error => {
+            allWorksList.innerHTML = '<div class="empty-state">데이터를 불러오는 중 오류가 발생했습니다.</div>';
+            console.error(error);
+        });
 
         setTimeout(() => map.invalidateSize(), 250);
         window.addEventListener("resize", () => {
