@@ -574,31 +574,28 @@
             } else {
                 const groupedByCountry = works.reduce((acc, item) => {
                     if (!acc[item.country]) {
-                        acc[item.country] = {};
+                        acc[item.country] = [];
                     }
-                    if (!acc[item.country][item.city]) {
-                        acc[item.country][item.city] = [];
-                    }
-                    acc[item.country][item.city].push(item);
+                    acc[item.country].push(item);
                     return acc;
                 }, {});
 
                 const sortedCountries = Object.entries(groupedByCountry).sort(([a], [b]) => a.localeCompare(b, "ko"));
 
-                sortedCountries.forEach(([country, cities]) => {
+                sortedCountries.forEach(([country, countryWorks]) => {
                     html += `
                         <div class="region-group">
                             <div class="region-group-title">${getCountryFlag(country)} ${country}</div>
+                            <ul class="simple-work-list">
                     `;
 
-                    Object.entries(cities).forEach(([city, cityWorks]) => {
-                        html += `
-                            <div class="city-group">
-                                <div class="city-group-title">🏙️ ${city}</div>
-                                <ul class="simple-work-list">
-                        `;
-
-                        cityWorks.forEach(item => {
+                    countryWorks
+                        .sort((a, b) => {
+                            const cityCompare = a.city.localeCompare(b.city, "ko");
+                            if (cityCompare !== 0) return cityCompare;
+                            return a.title.localeCompare(b.title, "ko");
+                        })
+                        .forEach(item => {
                             html += `
                                 <li class="simple-work-item">
                                     <button
@@ -610,20 +607,15 @@
                                         data-work-title="${item.title}"
                                         data-work-author="${item.author}"
                                     >
-                                        <span class="city-chip">${item.city}</span>
+                                        <span class="city-chip">${item.city},</span>
                                         <span class="title-chip">${item.title}</span>
                                     </button>
                                 </li>
                             `;
-                        });
-
-                        html += `
-                                </ul>
-                            </div>
-                        `;
                     });
 
                     html += `
+                            </ul>
                         </div>
                     `;
                 });
