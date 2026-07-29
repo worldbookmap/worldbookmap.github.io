@@ -609,6 +609,10 @@
         function getFilteredWorks() {
             const allWorks = [...literatureData];
 
+            if (currentFilter.type === "country") {
+                return allWorks.filter(item => item.country === currentFilter.value);
+            }
+
             if (currentFilter.type === "region") {
                 return allWorks.filter(item => item.city === currentFilter.value);
             }
@@ -621,7 +625,9 @@
         }
 
         function updateFilterSummary() {
-            if (currentFilter.type === "region") {
+            if (currentFilter.type === "country") {
+                filterSummary.textContent = `${currentFilter.value} 국가의 작품만 표시 중입니다.`;
+            } else if (currentFilter.type === "region") {
                 filterSummary.textContent = `${currentFilter.value} 지역의 작품만 표시 중입니다.`;
             } else if (currentFilter.type === "author") {
                 filterSummary.textContent = `${currentFilter.value} 저자의 작품만 표시 중입니다.`;
@@ -666,8 +672,8 @@
                                     <button
                                         type="button"
                                         class="simple-work-link"
-                                        data-filter="author"
-                                        data-value="${item.author}"
+                                        data-filter="country"
+                                        data-value="${item.country}"
                                         data-item-id="${item.id}"
                                         data-location-key="${getLocationKey(item)}"
                                         data-work-title="${item.title}"
@@ -691,19 +697,22 @@
             updateFilterSummary();
         }
 
-        function selectItem(itemId) {
+        function selectItem(itemId, options = {}) {
+            const { openPanel = true } = options;
             const item = literatureData.find(entry => entry.id === itemId);
             if (!item) return;
 
-            if (selectedItemId === itemId && !infoPanel.classList.contains("is-collapsed")) {
+            if (openPanel && selectedItemId === itemId && !infoPanel.classList.contains("is-collapsed")) {
                 setInfoPanelVisible(false);
                 return;
             }
 
             selectedItemId = itemId;
             selectedLocationKey = getLocationKey(item);
-            renderSelectedLocation(selectedLocationKey);
-            setInfoPanelVisible(true);
+            if (openPanel) {
+                renderSelectedLocation(selectedLocationKey);
+                setInfoPanelVisible(true);
+            }
             const targetLng = getNearestWrappedLng(item.lng);
             map.panTo([item.lat, targetLng], { animate: true, duration: 0.7 });
             highlightMarkersBySelection(selectedLocationKey);
@@ -771,17 +780,14 @@
             renderAllWorksList();
         }
 
-        function showLocationPopup(button) {
-            const itemId = button?.dataset?.itemId;
+        function showLocationPopupByItemId(itemId) {
             if (!itemId) return;
 
-            const locationKey = button?.dataset?.locationKey;
-            const marker = findBestMarkerByLocationKey(locationKey) || findBestMarkerByItemId(itemId);
-            if (!marker) return;
-
-            const workTitle = button.dataset.workTitle || "작품";
-            const workAuthor = button.dataset.workAuthor || "작가";
             const item = literatureData.find(entry => entry.id === itemId);
+            if (!item) return;
+
+            const workTitle = item.title || "작품";
+            const workAuthor = item.author || "작가";
             const popupContent = `
                 <div style="font-size: 0.86rem; line-height: 1.5; max-width: 220px;">
                     <strong>${item?.city || "지역"}</strong><br />
@@ -791,47 +797,44 @@
                 </div>
             `;
 
-            marker.bindPopup(popupContent).openPopup();
-        }
-
-        function hideLocationPopup(button) {
-            const locationKey = button?.dataset?.locationKey;
-            const itemId = button?.dataset?.itemId;
-            const marker = findBestMarkerByLocationKey(locationKey) || findBestMarkerByItemId(itemId);
-            if (marker) {
-                marker.closePopup();
-            }
+            const popupLng = getNearestWrappedLng(item.lng);
+            L.popup({ closeButton: true, autoClose: true, closeOnClick: false })
+                .setLatLng([item.lat, popupLng])
+                .setContent(popupContent)
+                .openOn(map);
         }
 
         allWorksList.addEventListener("click", (event) => {
             const button = event.target.closest("button[data-filter]");
             if (button) {
+                event.stopPropagation();
+                const itemId = button.dataset.itemId;
+                const shouldOpenPanel = !infoPanel.classList.contains("is-collapsed");
                 currentFilter = {
                     type: button.dataset.filter,
                     value: button.dataset.value
                 };
                 renderAllWorksList();
 
-                if (button.dataset.itemId) {
-                    selectItem(button.dataset.itemId);
+                if (itemId) {
+                    map.closePopup();
+                    selectItem(itemId, { openPanel: shouldOpenPanel });
+                    showLocationPopupByItemId(itemId);
                 }
                 return;
             }
         });
 
-        allWorksList.addEventListener("mouseenter", (event) => {
-            const button = event.target.closest("button[data-item-id]");
-            if (button) {
-                showLocationPopup(button);
-            }
-        }, true);
+        document.addEventListener("click", (event) => {
+            const clickedWorkButton = event.target.closest("button[data-item-id]");
+            const clickedPopup = event.target.closest(".leaflet-popup");
 
-        allWorksList.addEventListener("mouseleave", (event) => {
-            const button = event.target.closest("button[data-item-id]");
-            if (button) {
-                hideLocationPopup(button);
+            if (clickedWorkButton || clickedPopup) {
+                return;
             }
-        }, true);
+
+            map.closePopup();
+        });
 
         infoPanel.addEventListener("click", (event) => {
             const closeButton = event.target.closest("button[data-panel-close='true']");
