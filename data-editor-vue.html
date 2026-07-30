@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>데이터 편집기 (Vue)</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #0e1e1f;
+            --panel: #13292a;
+            --panel-2: #183536;
+            --text: #f4f7f7;
+            --muted: #a9c7c4;
+            --accent: #eaa521;
+            --accent-soft: #f5c96a;
+            --border: #2d4f4f;
+            --danger: #ffb4b4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Nanum Myeongjo", "Times New Roman", serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 8px;
+            color: var(--accent-soft);
+        }
+
+        p {
+            margin: 0;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .input-row {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .text-input {
+            flex: 1 1 260px;
+            min-width: 200px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #0b1718;
+            color: #f7fbfa;
+            padding: 10px 12px;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 0.9rem;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #111;
+            font-weight: 700;
+        }
+
+        .btn-secondary {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 560px;
+            resize: vertical;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #0b1718;
+            color: #f7fbfa;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .hint {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+
+        .status {
+            min-height: 22px;
+            color: var(--accent-soft);
+            font-size: 0.95rem;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .status.is-error {
+            color: var(--danger);
+        }
+
+        .inline-code {
+            display: inline-block;
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            background: rgba(234, 165, 33, 0.16);
+            color: var(--accent-soft);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 12px;
+            }
+
+            .card {
+                padding: 14px;
+            }
+
+            textarea {
+                min-height: 420px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="page">
+        <section class="card">
+            <h1>데이터 편집기 (Vue)</h1>
+            <p>책 지도에 필요한 데이터를 입력하고 검증한 뒤 서버의 data.json으로 반영할 수 있습니다.</p>
+            <div class="toolbar">
+                <button type="button" class="btn-primary" @click="populateExample">예시 데이터 불러오기</button>
+                <button type="button" class="btn-secondary" @click="loadCurrentJson">현재 data.json 불러오기</button>
+                <button type="button" class="btn-secondary" @click="validateJson">JSON 검증</button>
+                <button type="button" class="btn-primary" @click="applyChangesToServer" :disabled="isSubmitting">{{ isSubmitting ? "반영 중..." : "서버 반영" }}</button>
+            </div>
+            <div class="input-row">
+                <input v-model="editorApiKey" class="text-input" type="password" placeholder="EDITOR_API_KEY 입력" autocomplete="current-password" />
+                <input v-model="commitMessage" class="text-input" type="text" placeholder="커밋 메시지 (선택)" />
+            </div>
+            <div class="status" :class="{ 'is-error': statusType === 'error' }">{{ statusMessage }}</div>
+        </section>
+
+        <section class="card">
+            <textarea v-model="editorValue" spellcheck="false"></textarea>
+            <div class="hint">
+                형식은
+                <span class="inline-code">[{ "id": "seoul-광장", "country": "대한민국", "city": "서울", "lat": 37.5665, "lng": 126.9780, "title": "광장", "author": "최인훈", "desc": "설명" }]</span>
+                형태로 입력하면 됩니다.
+            </div>
+            <div class="hint">
+                서버 반영은 Vercel API를 통해 GitHub 저장소의 data.json을 커밋하는 방식입니다.
+            </div>
+        </section>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const editorValue = ref("");
+                const statusMessage = ref("빈 JSON 배열로 시작합니다.");
+                const statusType = ref("info");
+                const editorApiKey = ref("");
+                const commitMessage = ref("");
+                const isSubmitting = ref(false);
+
+                function setStatus(message, type = "info") {
+                    statusMessage.value = message;
+                    statusType.value = type;
+                }
+
+                function getDefaultJson() {
+                    return `[
+  {
+    "id": "seoul-광장",
+    "country": "대한민국",
+    "city": "서울",
+    "lat": 37.5665,
+    "lng": 126.978,
+    "title": "광장",
+    "author": "최인훈",
+    "desc": "서울을 배경으로 한 현대문학의 대표작입니다."
+  }
+]`;
+                }
+
+                function populateExample() {
+                    editorValue.value = getDefaultJson();
+                    setStatus("예시 데이터로 채웠습니다.");
+                }
+
+                function validateJson() {
+                    try {
+                        const parsed = JSON.parse(editorValue.value);
+                        if (!Array.isArray(parsed)) {
+                            throw new Error("최상위는 배열이어야 합니다.");
+                        }
+                        setStatus("JSON 검증 완료: " + parsed.length + "개 작품 데이터입니다.");
+                        return parsed;
+                    } catch (error) {
+                        setStatus("JSON 검증 실패: " + error.message, "error");
+                        return null;
+                    }
+                }
+
+                async function applyChangesToServer() {
+                    const parsed = validateJson();
+                    if (!parsed) return;
+
+                    if (isSubmitting.value) {
+                        return;
+                    }
+
+                    isSubmitting.value = true;
+                    setStatus("서버 반영 요청 중입니다...");
+
+                    try {
+                        const headers = {
+                            "Content-Type": "application/json"
+                        };
+
+                        if (editorApiKey.value) {
+                            headers["x-editor-key"] = editorApiKey.value;
+                        }
+
+                        const response = await fetch("/api/update-data", {
+                            method: "POST",
+                            headers,
+                            body: JSON.stringify({
+                                data: parsed,
+                                commitMessage: commitMessage.value || undefined
+                            })
+                        });
+
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            throw new Error(result.error || ("HTTP " + response.status));
+                        }
+
+                        const commitSha = (result.commitSha || "").slice(0, 7);
+                        if (commitSha) {
+                            setStatus("서버 data.json 반영 완료 (commit: " + commitSha + ")");
+                        } else {
+                            setStatus("서버 data.json 반영 완료");
+                        }
+                    } catch (error) {
+                        setStatus("서버 반영 실패: " + error.message, "error");
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                }
+
+                async function loadCurrentJson() {
+                    try {
+                        const response = await fetch("./data.json", { cache: "no-store" });
+                        if (!response.ok) throw new Error("HTTP " + response.status);
+                        const text = await response.text();
+                        editorValue.value = text;
+                        setStatus("현재 data.json 내용을 불러왔습니다.");
+                    } catch (error) {
+                        setStatus("현재 data.json을 불러오지 못했습니다: " + error.message, "error");
+                    }
+                }
+
+                onMounted(() => {
+                    populateExample();
+                });
+
+                return {
+                    editorValue,
+                    statusMessage,
+                    statusType,
+                    editorApiKey,
+                    commitMessage,
+                    isSubmitting,
+                    populateExample,
+                    loadCurrentJson,
+                    validateJson,
+                    applyChangesToServer
+                };
+            }
+        }).mount("#app");
+    </script>
+</body>
+</html>

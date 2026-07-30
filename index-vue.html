@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>독서 세계 지도 (Vue)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7.3.2/css/flag-icons.min.css" />
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a1617;
+            color: #f3f7f7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        header {
+            background: #0e1e1f;
+            color: white;
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        header h1 {
+            font-family: "Nanum Myeongjo", "Times New Roman", serif;
+            font-size: 2.1rem;
+            line-height: 1.25;
+            margin-bottom: 0.35rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+
+        .header-title-accent {
+            color: #e6f7f1;
+        }
+
+        .header-title-strong {
+            color: #eaa521;
+            font-weight: 900;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1rem 1.5rem;
+            min-height: 0;
+            min-height: 620px;
+            flex-wrap: nowrap;
+            align-items: flex-start;
+        }
+
+        #map-container {
+            flex: 2 1 0;
+            min-height: 480px;
+            height: 580px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            background: #e4f7f2;
+            position: relative;
+            z-index: 1;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 480px;
+        }
+
+        #info-panel {
+            flex: 0 0 320px;
+            width: 320px;
+            max-height: 540px;
+            background: white;
+            border-radius: 12px;
+            padding: 1.1rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            overflow-y: auto;
+            position: relative;
+            z-index: 2;
+            transition: all 0.25s ease;
+        }
+
+        #info-panel.is-collapsed {
+            display: none;
+        }
+
+        .panel-placeholder {
+            color: #6b7280;
+            line-height: 1.6;
+            padding-top: 1rem;
+        }
+
+        .panel-close-btn {
+            position: absolute;
+            top: 0.7rem;
+            right: 0.7rem;
+            border: none;
+            border-radius: 999px;
+            background: #3f8f7a;
+            color: white;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 4;
+        }
+
+        .panel-close-btn:hover {
+            background: #317567;
+        }
+
+        .location-title {
+            color: #3f6b3f;
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            border-bottom: 2px solid #9bd5c4;
+            padding-bottom: 0.4rem;
+        }
+
+        .book-item {
+            background: #f7fdfb;
+            border-left: 4px solid #63b79a;
+            border-radius: 0 8px 8px 0;
+            padding: 0.85rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .book-item-toggle {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 0;
+            text-align: left;
+            cursor: pointer;
+            display: block;
+        }
+
+        .book-details {
+            display: none;
+            margin-top: 0.55rem;
+        }
+
+        .book-item.is-expanded .book-details {
+            display: block;
+        }
+
+        .book-item.is-expanded .book-title {
+            color: #3f6b3f;
+        }
+
+        .book-title {
+            font-weight: 700;
+            color: #14213d;
+            margin-bottom: 0.25rem;
+        }
+
+        .book-author {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 0.3rem;
+        }
+
+        .book-desc {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+
+        .list-container {
+            margin: 0 1rem 1.5rem;
+            background: #0e1e1f;
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 3;
+        }
+
+        .list-container h2 {
+            font-size: 1rem;
+            color: #f2f7f6;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .filter-summary {
+            font-size: 0.82rem;
+            color: #b9d6d4;
+            margin-bottom: 0.8rem;
+        }
+
+        .filter-reset-btn {
+            border: none;
+            border-radius: 999px;
+            background: #3f8f7a;
+            color: white;
+            padding: 0.45rem 0.8rem;
+            font-size: 0.84rem;
+            cursor: pointer;
+        }
+
+        .filter-reset-btn:hover {
+            background: #317567;
+        }
+
+        .all-works-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .region-group {
+            border: 1px solid #1d2f30;
+            border-radius: 10px;
+            background: #0f2324;
+            padding: 0.8rem;
+        }
+
+        .region-group-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #f2f7f6;
+            margin-bottom: 0.6rem;
+        }
+
+        .simple-work-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        .simple-work-item {
+            display: inline-flex;
+        }
+
+        .simple-work-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            border: 1px solid #2f4f50;
+            border-radius: 999px;
+            background: #173536;
+            color: #f3f9f8;
+            padding: 0.52rem 0.72rem;
+            font-size: 0.76rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+            transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+        }
+
+        .simple-work-link:hover {
+            background: #214647;
+            color: #ffe1b0;
+            transform: translateY(-1px);
+        }
+
+        .city-chip {
+            font-weight: 700;
+            color: #eaa521;
+        }
+
+        .title-chip {
+            color: #d8efeb;
+        }
+
+        .country-flag {
+            vertical-align: -0.1em;
+            margin-right: 0.35rem;
+            border-radius: 2px;
+        }
+
+        .empty-state {
+            color: #64748b;
+            padding: 1rem 0;
+        }
+
+        @media (max-width: 860px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                align-items: stretch;
+                min-height: auto;
+            }
+
+            #map-container {
+                height: 420px;
+                min-height: 420px;
+            }
+
+            #info-panel {
+                width: 100%;
+                max-width: none;
+                min-width: 0;
+                max-height: 480px;
+                min-height: 280px;
+                flex-basis: auto;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1><span class="header-title-accent"></span> <span class="header-title-strong">책으로</span> 여행하기</h1>
+            <p>세상에서 가장 사치스럽고 우아한 놀이</p>
+        </header>
+
+        <div class="main-container">
+            <div id="map-container">
+                <div id="map"></div>
+            </div>
+            <aside id="info-panel" :class="{ 'is-collapsed': !panelVisible }">
+                <button type="button" class="panel-close-btn" @click="closePanel">닫기</button>
+                <template v-if="selectedLocationItems.length">
+                    <h2 class="location-title">
+                        <span
+                            v-if="getCountryFlagCode(selectedLocationItems[0].country)"
+                            class="country-flag"
+                            :class="['fi', 'fi-' + getCountryFlagCode(selectedLocationItems[0].country)]"
+                            aria-hidden="true"
+                        ></span>{{ selectedLocationItems[0].city }}, {{ selectedLocationItems[0].country }}
+                    </h2>
+                    <div
+                        v-for="item in selectedLocationItems"
+                        :key="getWorkKey(item)"
+                        class="book-item"
+                        :class="{ 'is-expanded': isWorkExpanded(item) }"
+                    >
+                        <div
+                            class="book-item-toggle"
+                            role="button"
+                            tabindex="0"
+                            @click="toggleWork(item)"
+                            @keydown.enter.prevent="toggleWork(item)"
+                            @keydown.space.prevent="toggleWork(item)"
+                        >
+                            <div class="book-title">
+                                <span
+                                    v-if="getCountryFlagCode(item.country)"
+                                    class="country-flag"
+                                    :class="['fi', 'fi-' + getCountryFlagCode(item.country)]"
+                                    aria-hidden="true"
+                                ></span>{{ item.title }}
+                            </div>
+                            <div class="book-author">저자: {{ item.author }}</div>
+                        </div>
+                        <div class="book-details">
+                            <div class="book-desc">{{ item.desc }}</div>
+                        </div>
+                    </div>
+                </template>
+                <div v-else class="panel-placeholder">지도 위의 핀을 클릭하면 해당 지역의 작품 목록이 이곳에 표시됩니다.</div>
+            </aside>
+        </div>
+
+        <div class="list-container">
+            <div class="list-header">
+                <h2>전체 작품 목록</h2>
+                <button type="button" class="filter-reset-btn" @click="resetFilter">전체 보기</button>
+            </div>
+            <div class="filter-summary">{{ filterSummaryText }}</div>
+            <div class="all-works-grid">
+                <div v-if="loadError" class="empty-state">데이터를 불러오는 중 오류가 발생했습니다.</div>
+                <div v-else-if="groupedWorks.length === 0" class="empty-state">표시할 작품이 없습니다.</div>
+                <div v-else v-for="group in groupedWorks" :key="group.country" class="region-group">
+                    <div class="region-group-title">
+                        <span
+                            v-if="getCountryFlagCode(group.country)"
+                            class="country-flag"
+                            :class="['fi', 'fi-' + getCountryFlagCode(group.country)]"
+                            aria-hidden="true"
+                        ></span>{{ group.country }}
+                    </div>
+                    <ul class="simple-work-list">
+                        <li v-for="item in group.items" :key="item.id" class="simple-work-item">
+                            <button type="button" class="simple-work-link" @click="onWorkChipClick(item)">
+                                <span class="city-chip">{{ item.city }},</span>
+                                <span class="title-chip">{{ item.title }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
+
+        createApp({
+            setup() {
+                const countryFlagCodes = {
+                    "그리스": "gr",
+                    "대한민국": "kr",
+                    "한국": "kr",
+                    "대만": "tw",
+                    "독일": "de",
+                    "러시아": "ru",
+                    "멕시코": "mx",
+                    "미국": "us",
+                    "베트남": "vn",
+                    "스페인": "es",
+                    "아일랜드": "ie",
+                    "알제리": "dz",
+                    "영국": "gb",
+                    "오스트리아": "at",
+                    "이란": "ir",
+                    "이스라엘": "il",
+                    "이탈리아": "it",
+                    "인도": "in",
+                    "일본": "jp",
+                    "체코": "cz",
+                    "칠레": "cl",
+                    "튀르키예": "tr",
+                    "터키": "tr",
+                    "포르투갈": "pt",
+                    "폴란드": "pl",
+                    "프랑스": "fr",
+                    "호주": "au"
+                };
+
+                const literatureData = ref([]);
+                const loadError = ref(false);
+                const panelVisible = ref(false);
+                const currentFilter = reactive({ type: "all", value: "" });
+                const selectedItemId = ref(null);
+                const selectedLocationKey = ref(null);
+                const expandedWorkKeys = ref(new Set());
+
+                const uniqueLocations = [];
+                const markers = [];
+
+                let map = null;
+                let markerLayer = null;
+                let clickOutsideHandler = null;
+                let resizeHandler = null;
+                let moveEndHandler = null;
+
+                function getCountryFlagCode(country) {
+                    return countryFlagCodes[(country || "").trim()] || "";
+                }
+
+                function getLocationKey(item) {
+                    return item.country + "::" + item.city;
+                }
+
+                function getWorkKey(work) {
+                    return work.id || [work.country, work.city, work.title, work.author].join("::");
+                }
+
+                function normalizeLiteratureData(rawData) {
+                    if (!Array.isArray(rawData)) return [];
+
+                    const normalized = [];
+                    rawData.forEach((entry) => {
+                        if (entry && Array.isArray(entry.works)) {
+                            entry.works.forEach((work, workIndex) => {
+                                normalized.push({
+                                    id: work.id || ((entry.id || entry.city || "location") + "-" + (workIndex + 1)),
+                                    country: entry.country,
+                                    city: entry.city,
+                                    lat: entry.lat,
+                                    lng: entry.lng,
+                                    title: work.title,
+                                    author: work.author,
+                                    desc: work.desc
+                                });
+                            });
+                            return;
+                        }
+
+                        if (!entry || !entry.country || !entry.city || !entry.title) return;
+
+                        normalized.push({
+                            id: entry.id || (entry.country + "-" + entry.city + "-" + entry.title + "-" + (entry.author || "work"))
+                                .replace(/[^a-zA-Z0-9가-힣]+/g, "-")
+                                .toLowerCase(),
+                            country: entry.country,
+                            city: entry.city,
+                            lat: entry.lat,
+                            lng: entry.lng,
+                            title: entry.title,
+                            author: entry.author,
+                            desc: entry.desc
+                        });
+                    });
+
+                    return normalized;
+                }
+
+                const filteredWorks = computed(() => {
+                    if (currentFilter.type === "country") {
+                        return literatureData.value.filter(item => item.country === currentFilter.value);
+                    }
+                    if (currentFilter.type === "region") {
+                        return literatureData.value.filter(item => item.city === currentFilter.value);
+                    }
+                    if (currentFilter.type === "author") {
+                        return literatureData.value.filter(item => item.author === currentFilter.value);
+                    }
+                    return [...literatureData.value];
+                });
+
+                const groupedWorks = computed(() => {
+                    const groupedByCountry = filteredWorks.value.reduce((acc, item) => {
+                        if (!acc[item.country]) acc[item.country] = [];
+                        acc[item.country].push(item);
+                        return acc;
+                    }, {});
+
+                    return Object.entries(groupedByCountry)
+                        .sort(([a], [b]) => a.localeCompare(b, "ko"))
+                        .map(([country, items]) => ({
+                            country,
+                            items: items.slice().sort((a, b) => {
+                                const cityCompare = a.city.localeCompare(b.city, "ko");
+                                if (cityCompare !== 0) return cityCompare;
+                                return a.title.localeCompare(b.title, "ko");
+                            })
+                        }));
+                });
+
+                const filterSummaryText = computed(() => {
+                    if (currentFilter.type === "country") {
+                        return currentFilter.value + " 국가의 작품만 표시 중입니다.";
+                    }
+                    if (currentFilter.type === "region") {
+                        return currentFilter.value + " 지역의 작품만 표시 중입니다.";
+                    }
+                    if (currentFilter.type === "author") {
+                        return currentFilter.value + " 저자의 작품만 표시 중입니다.";
+                    }
+                    return "모든 작품을 표시 중입니다.";
+                });
+
+                const selectedLocationItems = computed(() => {
+                    if (!selectedLocationKey.value) return [];
+                    return literatureData.value.filter(item => getLocationKey(item) === selectedLocationKey.value);
+                });
+
+                function getNearestWrappedLng(baseLng, referenceLng = map.getCenter().lng) {
+                    const worldOffset = Math.round((referenceLng - baseLng) / 360);
+                    return baseLng + (worldOffset * 360);
+                }
+
+                function highlightMarkersBySelection(locationKey) {
+                    markers.forEach((marker) => {
+                        const isActive = marker.locationKey === locationKey;
+                        marker.setOpacity(isActive ? 1 : 0.35);
+                        if (marker.setZIndexOffset) {
+                            marker.setZIndexOffset(isActive ? 1000 : 0);
+                        }
+                    });
+                }
+
+                function selectItem(itemId, options = {}) {
+                    const openPanel = options.openPanel !== undefined ? options.openPanel : true;
+                    const item = literatureData.value.find(entry => entry.id === itemId);
+                    if (!item) return;
+
+                    if (openPanel && selectedItemId.value === itemId && panelVisible.value) {
+                        panelVisible.value = false;
+                        return;
+                    }
+
+                    selectedItemId.value = itemId;
+                    selectedLocationKey.value = getLocationKey(item);
+
+                    if (openPanel) {
+                        panelVisible.value = true;
+                    }
+
+                    const targetLng = getNearestWrappedLng(item.lng);
+                    map.panTo([item.lat, targetLng], { animate: true, duration: 0.7 });
+                    highlightMarkersBySelection(selectedLocationKey.value);
+                }
+
+                function showLocationPopupByItemId(itemId) {
+                    const item = literatureData.value.find(entry => entry.id === itemId);
+                    if (!item) return;
+
+                    const workTitle = item.title || "작품";
+                    const workAuthor = item.author || "작가";
+                    const popupContent = "<div style=\"font-size: 0.86rem; line-height: 1.5; max-width: 220px;\">"
+                        + "<strong>" + (item.city || "지역") + "</strong><br />"
+                        + "<div style=\"margin: 0.25rem 0 0.35rem; font-weight: 700; color: #14213d;\">" + workTitle + "</div>"
+                        + "<div style=\"color:#64748b; margin-bottom: 0.35rem;\">" + workAuthor + "</div>"
+                        + "<div style=\"color:#334155;\">" + (item.desc || "설명이 준비되어 있습니다.") + "</div>"
+                        + "</div>";
+
+                    const popupLng = getNearestWrappedLng(item.lng);
+                    L.popup({ closeButton: true, autoClose: true, closeOnClick: false })
+                        .setLatLng([item.lat, popupLng])
+                        .setContent(popupContent)
+                        .openOn(map);
+                }
+
+                function updateWrappedMarkers() {
+                    markers.length = 0;
+                    markerLayer.clearLayers();
+
+                    if (!uniqueLocations.length) return;
+
+                    const bounds = map.getBounds();
+                    const west = bounds.getWest();
+                    const east = bounds.getEast();
+
+                    // 현재 뷰 범위에 맞춰 경도 360도 래핑 마커를 다시 생성합니다.
+                    uniqueLocations.forEach((location) => {
+                        const minWrap = Math.floor((west - location.lng) / 360);
+                        const maxWrap = Math.ceil((east - location.lng) / 360);
+
+                        for (let wrapIndex = minWrap; wrapIndex <= maxWrap; wrapIndex += 1) {
+                            const wrappedLng = location.lng + (wrapIndex * 360);
+                            const marker = L.marker([location.lat, wrappedLng]).addTo(markerLayer);
+                            marker.bindTooltip(location.city + " (" + location.country + ")");
+                            marker.locationKey = location.locationKey;
+                            marker.itemId = location.itemId;
+                            marker.on("click", () => selectItem(location.itemId));
+                            markers.push(marker);
+                        }
+                    });
+
+                    if (selectedLocationKey.value) {
+                        highlightMarkersBySelection(selectedLocationKey.value);
+                    }
+                }
+
+                function createMarkers() {
+                    uniqueLocations.length = 0;
+                    const seenLocations = new Set();
+
+                    literatureData.value.forEach((item) => {
+                        const locationKey = getLocationKey(item);
+                        if (seenLocations.has(locationKey)) return;
+
+                        seenLocations.add(locationKey);
+                        uniqueLocations.push({
+                            locationKey,
+                            itemId: item.id,
+                            city: item.city,
+                            country: item.country,
+                            lat: item.lat,
+                            lng: item.lng
+                        });
+                    });
+
+                    updateWrappedMarkers();
+                }
+
+                async function loadData() {
+                    try {
+                        const response = await fetch("data.json", { cache: "no-store" });
+                        if (!response.ok) {
+                            throw new Error("데이터 로드 실패: " + response.status + " " + response.statusText);
+                        }
+
+                        literatureData.value = normalizeLiteratureData(await response.json());
+                        createMarkers();
+                        loadError.value = false;
+                    } catch (error) {
+                        loadError.value = true;
+                        console.error(error);
+                    }
+                }
+
+                function onWorkChipClick(item) {
+                    const shouldOpenPanel = panelVisible.value;
+                    currentFilter.type = "country";
+                    currentFilter.value = item.country;
+
+                    map.closePopup();
+                    selectItem(item.id, { openPanel: shouldOpenPanel });
+                    showLocationPopupByItemId(item.id);
+                }
+
+                function resetFilter() {
+                    currentFilter.type = "all";
+                    currentFilter.value = "";
+                }
+
+                function isWorkExpanded(item) {
+                    return expandedWorkKeys.value.has(getWorkKey(item));
+                }
+
+                function toggleWork(item) {
+                    const workKey = getWorkKey(item);
+                    if (expandedWorkKeys.value.has(workKey)) {
+                        expandedWorkKeys.value.delete(workKey);
+                    } else {
+                        expandedWorkKeys.value.add(workKey);
+                    }
+                    expandedWorkKeys.value = new Set(expandedWorkKeys.value);
+                }
+
+                function closePanel() {
+                    panelVisible.value = false;
+                }
+
+                onMounted(async () => {
+                    map = L.map("map", {
+                        zoomControl: true,
+                        attributionControl: true
+                    }).setView([37.5665, 126.9780], 3);
+
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        attribution: "© OpenStreetMap contributors",
+                        maxZoom: 18
+                    }).addTo(map);
+
+                    markerLayer = L.layerGroup().addTo(map);
+
+                    await loadData();
+
+                    moveEndHandler = () => updateWrappedMarkers();
+                    resizeHandler = () => map.invalidateSize();
+                    clickOutsideHandler = (event) => {
+                        const clickedWorkButton = event.target.closest("button.simple-work-link");
+                        const clickedPopup = event.target.closest(".leaflet-popup");
+                        if (clickedWorkButton || clickedPopup) return;
+                        map.closePopup();
+                    };
+
+                    map.on("moveend", moveEndHandler);
+                    window.addEventListener("resize", resizeHandler);
+                    document.addEventListener("click", clickOutsideHandler);
+
+                    setTimeout(() => map.invalidateSize(), 250);
+                });
+
+                onBeforeUnmount(() => {
+                    if (map && moveEndHandler) {
+                        map.off("moveend", moveEndHandler);
+                    }
+                    if (resizeHandler) {
+                        window.removeEventListener("resize", resizeHandler);
+                    }
+                    if (clickOutsideHandler) {
+                        document.removeEventListener("click", clickOutsideHandler);
+                    }
+                    if (map) {
+                        map.remove();
+                    }
+                });
+
+                return {
+                    loadError,
+                    panelVisible,
+                    selectedLocationItems,
+                    groupedWorks,
+                    filterSummaryText,
+                    getCountryFlagCode,
+                    onWorkChipClick,
+                    resetFilter,
+                    closePanel,
+                    isWorkExpanded,
+                    toggleWork,
+                    getWorkKey
+                };
+            }
+        }).mount("#app");
+    </script>
+</body>
+</html>
