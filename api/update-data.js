@@ -10,9 +10,9 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const githubToken = process.env.GITHUB_TOKEN;
+    const githubToken = process.env.GITHUB_TOKEN || process.env.WBM;
     if (!githubToken) {
-        return res.status(500).json({ error: "GITHUB_TOKEN is not configured" });
+        return res.status(500).json({ error: "GITHUB_TOKEN or WBM is not configured" });
     }
 
     let body = req.body;
