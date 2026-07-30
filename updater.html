@@ -545,6 +545,20 @@
                     return { ok: false };
                 }
 
+                async function fetchLatestDataArray() {
+                    const response = await fetch("./data.json", { cache: "no-store" });
+                    if (!response.ok) {
+                        throw new Error("현재 data.json을 불러오지 못했습니다. HTTP " + response.status);
+                    }
+
+                    const latestData = await response.json();
+                    if (!Array.isArray(latestData)) {
+                        throw new Error("현재 data.json 최상위가 배열이 아닙니다.");
+                    }
+
+                    return latestData;
+                }
+
                 async function prependItemToJson() {
                     const requiredFields = ["country", "city", "lat", "lng", "title", "author", "desc"];
                     const missingField = requiredFields.find((key) => !String(newItem[key] || "").trim());
@@ -560,8 +574,13 @@
                         return;
                     }
 
-                    const parsed = validateJson();
-                    if (!parsed) return;
+                    let parsed;
+                    try {
+                        parsed = await fetchLatestDataArray();
+                    } catch (error) {
+                        setStatus(error.message, "error");
+                        return;
+                    }
 
                     const generatedIdBase = (newItem.city + "-" + newItem.title)
                         .trim()
@@ -692,18 +711,16 @@
 
                 async function loadCurrentJson() {
                     try {
-                        const response = await fetch("./data.json", { cache: "no-store" });
-                        if (!response.ok) throw new Error("HTTP " + response.status);
-                        const text = await response.text();
-                        editorValue.value = text;
+                        const latestData = await fetchLatestDataArray();
+                        editorValue.value = JSON.stringify(latestData, null, 2);
                         setStatus("현재 data.json 내용을 불러왔습니다.");
                     } catch (error) {
                         setStatus("현재 data.json을 불러오지 못했습니다: " + error.message, "error");
                     }
                 }
 
-                onMounted(() => {
-                    populateExample();
+                onMounted(async () => {
+                    await loadCurrentJson();
                 });
 
                 return {
