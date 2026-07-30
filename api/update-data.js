@@ -10,7 +10,7 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const githubToken = process.env.GITHUB_TOKEN || process.env.WBM;
+    const githubToken = (process.env.GITHUB_TOKEN || process.env.WBM || "").trim();
     if (!githubToken) {
         return res.status(500).json({ error: "GITHUB_TOKEN or WBM is not configured" });
     }
@@ -30,10 +30,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "data must be an array" });
     }
 
-    const owner = process.env.GITHUB_OWNER || "worldbookmap";
-    const repo = process.env.GITHUB_REPO || "worldbookmap.github.io";
-    const branch = process.env.GITHUB_BRANCH || "main";
-    const targetPath = process.env.DATA_FILE_PATH || "data.json";
+    const owner = (process.env.GITHUB_OWNER || "worldbookmap").trim();
+    const repo = (process.env.GITHUB_REPO || "worldbookmap.github.io").trim();
+    const branch = (process.env.GITHUB_BRANCH || "main").trim();
+    const targetPath = (process.env.DATA_FILE_PATH || "data.json").trim();
     const encodedPath = targetPath.split("/").map(segment => encodeURIComponent(segment)).join("/");
 
     const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
@@ -55,9 +55,36 @@ export default async function handler(req, res) {
         currentSha = currentFile.sha;
     } else if (getResponse.status !== 404) {
         const errorText = await getResponse.text();
+        let detailMessage = errorText;
+        try {
+            const parsedError = JSON.parse(errorText);
+            if (parsedError && parsedError.message) {
+                detailMessage = parsedError.message;
+            }
+        } catch {
+            // Keep original text if it is not JSON.
+        }
+
+        let hint = "Check token scope (contents:write), owner/repo, branch, and data file path.";
+        if (getResponse.status === 401) {
+            hint = "Bad credentials. Verify GITHUB_TOKEN/WBM value in Vercel and redeploy.";
+        } else if (getResponse.status === 403) {
+            hint = "Token lacks repository access. Ensure contents write permission for target repository.";
+        } else if (getResponse.status === 422) {
+            hint = "Invalid branch or request payload. Verify GITHUB_BRANCH and repository settings.";
+        }
+
         return res.status(getResponse.status).json({
             error: "Failed to read current file from GitHub",
-            details: errorText
+            details: detailMessage,
+            statusCode: getResponse.status,
+            context: {
+                owner,
+                repo,
+                branch,
+                targetPath
+            },
+            hint
         });
     }
 

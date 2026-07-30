@@ -283,7 +283,13 @@
 
                         const result = await response.json().catch(() => ({}));
                         if (!response.ok) {
-                            throw new Error(result.error || ("HTTP " + response.status));
+                            const detailParts = [];
+                            if (result.error) detailParts.push(result.error);
+                            if (result.statusCode) detailParts.push("status=" + result.statusCode);
+                            if (result.details) detailParts.push("details=" + result.details);
+                            if (result.hint) detailParts.push("hint=" + result.hint);
+                            if (!detailParts.length) detailParts.push("HTTP " + response.status);
+                            throw new Error(detailParts.join(" | "));
                         }
 
                         const commitSha = (result.commitSha || "").slice(0, 7);
