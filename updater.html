@@ -415,7 +415,7 @@
                             </label>
                         </div>
                         <div class="form-actions">
-                            <button type="button" class="btn-primary" @click="prependItemToJson">업데이트 (맨 위 추가)</button>
+                            <button type="button" class="btn-primary" @click="prependItemToJson">업데이트</button>
                             <button type="button" class="btn-secondary" @click="resetNewItemForm">필드 초기화</button>
                         </div>
                     </div>
@@ -508,6 +508,43 @@
                     return null;
                 }
 
+                async function verifyItemAddedOnServer(expectedItem) {
+                    const maxAttempts = 4;
+                    const delayMs = 700;
+
+                    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+                        try {
+                            const response = await fetch("./data.json", { cache: "no-store" });
+                            if (!response.ok) {
+                                throw new Error("HTTP " + response.status);
+                            }
+
+                            const serverData = await response.json();
+                            if (!Array.isArray(serverData)) {
+                                throw new Error("서버 data.json 최상위가 배열이 아닙니다.");
+                            }
+
+                            const found = serverData.some((entry) =>
+                                String(entry?.id || "") === expectedItem.id &&
+                                String(entry?.title || "") === expectedItem.title &&
+                                String(entry?.city || "") === expectedItem.city
+                            );
+
+                            if (found) {
+                                return { ok: true, attempts: attempt };
+                            }
+                        } catch (error) {
+                            if (attempt === maxAttempts) {
+                                return { ok: false, error: error.message };
+                            }
+                        }
+
+                        await new Promise((resolve) => setTimeout(resolve, delayMs));
+                    }
+
+                    return { ok: false };
+                }
+
                 async function prependItemToJson() {
                     const requiredFields = ["country", "city", "lat", "lng", "title", "author", "desc"];
                     const missingField = requiredFields.find((key) => !String(newItem[key] || "").trim());
@@ -547,9 +584,20 @@
                     activeTab.value = "json";
                     resetNewItemForm();
 
-                    await applyChangesToServer(parsed, {
+                    const updated = await applyChangesToServer(parsed, {
                         successMessage: "새 항목을 서버 data.json 맨 위에 추가했습니다."
                     });
+
+                    if (updated) {
+                        const verification = await verifyItemAddedOnServer(item);
+                        if (verification.ok) {
+                            setStatus("업데이트 완료: data.json에 새 항목이 정상 추가되었습니다.");
+                        } else if (verification.error) {
+                            setStatus("서버 반영은 되었지만 검증 중 오류가 발생했습니다: " + verification.error, "error");
+                        } else {
+                            setStatus("서버 반영은 되었지만 data.json에서 새 항목을 확인하지 못했습니다.", "error");
+                        }
+                    }
 
                     await nextTick();
                     const editorEl = jsonEditorRef.value;
