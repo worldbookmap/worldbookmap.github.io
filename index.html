@@ -171,6 +171,54 @@
             color: #3f6b3f;
         }
 
+        .book-meta-row {
+            display: flex;
+            gap: 0.7rem;
+            align-items: flex-start;
+        }
+
+        .book-cover-frame {
+            width: 56px;
+            height: 84px;
+            border-radius: 6px;
+            overflow: hidden;
+            flex: 0 0 auto;
+            background: #d9e8e3;
+            border: 1px solid #c7dbd4;
+        }
+
+        .book-cover-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .book-cover-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0.2rem;
+            font-size: 0.64rem;
+            line-height: 1.25;
+            color: #45615b;
+            background: repeating-linear-gradient(
+                45deg,
+                #e6f0ec,
+                #e6f0ec 8px,
+                #d9e8e3 8px,
+                #d9e8e3 16px
+            );
+        }
+
+        .book-text-wrap {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
         .book-title {
             font-weight: 700;
             color: #14213d;
@@ -187,6 +235,12 @@
             font-size: 0.9rem;
             line-height: 1.5;
             color: #334155;
+        }
+
+        .book-cover-source {
+            margin-top: 0.45rem;
+            font-size: 0.76rem;
+            color: #6b7280;
         }
 
         .list-container {
@@ -368,18 +422,33 @@
                             @keydown.enter.prevent="toggleWork(item)"
                             @keydown.space.prevent="toggleWork(item)"
                         >
-                            <div class="book-title">
-                                <span
-                                    v-if="getCountryFlagCode(item.country)"
-                                    class="country-flag"
-                                    :class="['fi', 'fi-' + getCountryFlagCode(item.country)]"
-                                    aria-hidden="true"
-                                ></span>{{ item.title }}
+                            <div class="book-meta-row">
+                                <div class="book-cover-frame">
+                                    <img
+                                        v-if="getCoverState(item).status === 'loaded'"
+                                        class="book-cover-image"
+                                        :src="getCoverState(item).thumbnail"
+                                        :alt="item.title + ' 표지'"
+                                        loading="lazy"
+                                    />
+                                    <div v-else class="book-cover-placeholder">{{ getCoverLabel(item) }}</div>
+                                </div>
+                                <div class="book-text-wrap">
+                                    <div class="book-title">
+                                        <span
+                                            v-if="getCountryFlagCode(item.country)"
+                                            class="country-flag"
+                                            :class="['fi', 'fi-' + getCountryFlagCode(item.country)]"
+                                            aria-hidden="true"
+                                        ></span>{{ item.title }}
+                                    </div>
+                                    <div class="book-author">저자: {{ item.author }}</div>
+                                </div>
                             </div>
-                            <div class="book-author">저자: {{ item.author }}</div>
                         </div>
                         <div class="book-details">
                             <div class="book-desc">{{ item.desc }}</div>
+                            <div class="book-cover-source">표지: Kakao Book Search API</div>
                         </div>
                     </div>
                 </template>
@@ -421,7 +490,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
-        const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
+        const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount, watch } = Vue;
 
         createApp({
             setup() {
@@ -462,6 +531,7 @@
                 const selectedItemId = ref(null);
                 const selectedLocationKey = ref(null);
                 const expandedWorkKeys = ref(new Set());
+                const bookCoverCache = reactive({});
 
                 const uniqueLocations = [];
                 const markers = [];
@@ -482,6 +552,72 @@
 
                 function getWorkKey(work) {
                     return work.id || [work.country, work.city, work.title, work.author].join("::");
+                }
+
+                function getCoverCacheKey(work) {
+                    return getWorkKey(work);
+                }
+
+                function getCoverState(work) {
+                    const key = getCoverCacheKey(work);
+                    return bookCoverCache[key] || { status: "idle", thumbnail: "" };
+                }
+
+                function getCoverLabel(work) {
+                    const status = getCoverState(work).status;
+                    if (status === "loading") return "불러오는 중";
+                    if (status === "error") return "조회 실패";
+                    return "표지 없음";
+                }
+
+                async function fetchBookCover(work) {
+                    if (!work || !work.title) return;
+
+                    const cacheKey = getCoverCacheKey(work);
+                    const currentState = bookCoverCache[cacheKey];
+                    if (currentState && ["loading", "loaded", "not-found"].includes(currentState.status)) {
+                        return;
+                    }
+
+                    bookCoverCache[cacheKey] = { status: "loading", thumbnail: "" };
+
+                    try {
+                        const params = new URLSearchParams();
+                        params.set("title", work.title);
+                        if (work.author) {
+                            params.set("author", work.author);
+                        }
+
+                        const response = await fetch("/api/book-cover?" + params.toString(), { cache: "no-store" });
+                        if (!response.ok) {
+                            let detail = "HTTP " + response.status;
+                            try {
+                                const errorPayload = await response.json();
+                                if (errorPayload && errorPayload.error) {
+                                    detail = errorPayload.error;
+                                }
+                            } catch {
+                                // Ignore JSON parse failures for error response bodies.
+                            }
+                            throw new Error("표지 조회 실패: " + detail);
+                        }
+
+                        const payload = await response.json();
+                        const thumbnail = payload?.thumbnail || "";
+
+                        if (!thumbnail) {
+                            bookCoverCache[cacheKey] = { status: "not-found", thumbnail: "" };
+                            return;
+                        }
+
+                        bookCoverCache[cacheKey] = {
+                            status: "loaded",
+                            thumbnail: thumbnail.replace(/^http:/, "https:")
+                        };
+                    } catch (error) {
+                        console.error(error);
+                        bookCoverCache[cacheKey] = { status: "error", thumbnail: "" };
+                    }
                 }
 
                 function normalizeLiteratureData(rawData) {
@@ -573,6 +709,12 @@
                     if (!selectedLocationKey.value) return [];
                     return literatureData.value.filter(item => getLocationKey(item) === selectedLocationKey.value);
                 });
+
+                watch(selectedLocationItems, (items) => {
+                    items.forEach((item) => {
+                        fetchBookCover(item);
+                    });
+                }, { immediate: false });
 
                 function getNearestWrappedLng(baseLng, referenceLng = map.getCenter().lng) {
                     const worldOffset = Math.round((referenceLng - baseLng) / 360);
@@ -786,6 +928,8 @@
                     groupedWorks,
                     filterSummaryText,
                     getCountryFlagCode,
+                    getCoverState,
+                    getCoverLabel,
                     onWorkChipClick,
                     resetFilter,
                     closePanel,
