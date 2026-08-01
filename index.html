@@ -258,6 +258,45 @@
             color: #f2f7f6;
         }
 
+        .list-search-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.8rem;
+            padding: 0.5rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .list-search-input {
+            flex: 1 1 auto;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #f3f9f8;
+            font-size: 0.95rem;
+            padding: 0.15rem 0.2rem;
+        }
+
+        .list-search-input::placeholder {
+            color: #9fb4b2;
+        }
+
+        .list-search-clear {
+            border: none;
+            border-radius: 999px;
+            background: #3f8f7a;
+            color: white;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .list-search-clear:hover {
+            background: #317567;
+        }
+
         .list-header {
             display: flex;
             justify-content: space-between;
@@ -457,6 +496,16 @@
         </div>
 
         <div class="list-container">
+            <div class="list-search-wrap">
+                <input
+                    v-model="searchQuery"
+                    type="search"
+                    class="list-search-input"
+                    placeholder="작품 제목, 작가, 도시로 검색"
+                    aria-label="작품 검색"
+                />
+                <button v-if="searchQuery" type="button" class="list-search-clear" @click="clearSearch">지우기</button>
+            </div>
             <div class="list-header">
                 <h2>전체 작품 목록</h2>
                 <button type="button" class="filter-reset-btn" @click="resetFilter">전체 보기</button>
@@ -528,6 +577,7 @@
                 const loadError = ref(false);
                 const panelVisible = ref(false);
                 const currentFilter = reactive({ type: "all", value: "" });
+                const searchQuery = ref("");
                 const selectedItemId = ref(null);
                 const selectedLocationKey = ref(null);
                 const expandedWorkKeys = ref(new Set());
@@ -661,16 +711,29 @@
                 }
 
                 const filteredWorks = computed(() => {
+                    let items = [...literatureData.value];
+                    const query = searchQuery.value.trim().toLowerCase();
+
+                    if (query) {
+                        items = items.filter((item) => {
+                            const searchableText = [item.title, item.author, item.city, item.country, item.desc]
+                                .filter(Boolean)
+                                .join(" ")
+                                .toLowerCase();
+                            return searchableText.includes(query);
+                        });
+                    }
+
                     if (currentFilter.type === "country") {
-                        return literatureData.value.filter(item => item.country === currentFilter.value);
+                        return items.filter(item => item.country === currentFilter.value);
                     }
                     if (currentFilter.type === "region") {
-                        return literatureData.value.filter(item => item.city === currentFilter.value);
+                        return items.filter(item => item.city === currentFilter.value);
                     }
                     if (currentFilter.type === "author") {
-                        return literatureData.value.filter(item => item.author === currentFilter.value);
+                        return items.filter(item => item.author === currentFilter.value);
                     }
-                    return [...literatureData.value];
+                    return items;
                 });
 
                 const groupedWorks = computed(() => {
@@ -693,16 +756,20 @@
                 });
 
                 const filterSummaryText = computed(() => {
-                    if (currentFilter.type === "country") {
-                        return currentFilter.value + " 국가의 작품만 표시 중입니다.";
+                    const query = searchQuery.value.trim();
+                    const baseSummary = currentFilter.type === "country"
+                        ? currentFilter.value + " 국가의 작품만 표시 중입니다."
+                        : currentFilter.type === "region"
+                            ? currentFilter.value + " 지역의 작품만 표시 중입니다."
+                            : currentFilter.type === "author"
+                                ? currentFilter.value + " 저자의 작품만 표시 중입니다."
+                                : "모든 작품을 표시 중입니다.";
+
+                    if (!query) {
+                        return baseSummary;
                     }
-                    if (currentFilter.type === "region") {
-                        return currentFilter.value + " 지역의 작품만 표시 중입니다.";
-                    }
-                    if (currentFilter.type === "author") {
-                        return currentFilter.value + " 저자의 작품만 표시 중입니다.";
-                    }
-                    return "모든 작품을 표시 중입니다.";
+
+                    return '"' + query + '" 검색 결과 · ' + baseSummary;
                 });
 
                 const selectedLocationItems = computed(() => {
@@ -857,6 +924,10 @@
                     currentFilter.value = "";
                 }
 
+                function clearSearch() {
+                    searchQuery.value = "";
+                }
+
                 function isWorkExpanded(item) {
                     return expandedWorkKeys.value.has(getWorkKey(item));
                 }
@@ -927,11 +998,13 @@
                     selectedLocationItems,
                     groupedWorks,
                     filterSummaryText,
+                    searchQuery,
                     getCountryFlagCode,
                     getCoverState,
                     getCoverLabel,
                     onWorkChipClick,
                     resetFilter,
+                    clearSearch,
                     closePanel,
                     isWorkExpanded,
                     toggleWork,
