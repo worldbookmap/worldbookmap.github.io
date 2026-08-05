@@ -44,16 +44,21 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
     };
 
-    let currentSha;
-    const getResponse = await fetch(`${apiBase}?ref=${encodeURIComponent(branch)}`, {
-        method: "GET",
-        headers: commonHeaders
-    });
+    async function fetchCurrentSha() {
+        const getResponse = await fetch(`${apiBase}?ref=${encodeURIComponent(branch)}`, {
+            method: "GET",
+            headers: commonHeaders
+        });
 
-    if (getResponse.ok) {
-        const currentFile = await getResponse.json();
-        currentSha = currentFile.sha;
-    } else if (getResponse.status !== 404) {
+        if (getResponse.ok) {
+            const currentFile = await getResponse.json();
+            return { sha: currentFile.sha || undefined };
+        }
+
+        if (getResponse.status === 404) {
+            return { sha: undefined };
+        }
+
         const errorText = await getResponse.text();
         let detailMessage = errorText;
         try {
@@ -74,17 +79,29 @@ export default async function handler(req, res) {
             hint = "Invalid branch or request payload. Verify GITHUB_BRANCH and repository settings.";
         }
 
-        return res.status(getResponse.status).json({
-            error: "Failed to read current file from GitHub",
-            details: detailMessage,
-            statusCode: getResponse.status,
+        const readError = new Error("Failed to read current file from GitHub");
+        readError.statusCode = getResponse.status;
+        readError.details = detailMessage;
+        readError.hint = hint;
+        throw readError;
+    }
+
+    let currentSha;
+    try {
+        const current = await fetchCurrentSha();
+        currentSha = current.sha;
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            error: error.message || "Failed to read current file from GitHub",
+            details: error.details || null,
+            statusCode: error.statusCode || 500,
             context: {
                 owner,
                 repo,
                 branch,
                 targetPath
             },
-            hint
+            hint: error.hint || "Check token scope (contents:write), owner/repo, branch, and data file path."
         });
     }
 
@@ -94,27 +111,56 @@ export default async function handler(req, res) {
         ? commitMessageInput.trim()
         : "Update data.json via web editor";
 
-    const payload = {
-        message: commitMessage,
-        content: encodedContent,
-        branch
-    };
+    async function putDataWithSha(sha) {
+        const payload = {
+            message: commitMessage,
+            content: encodedContent,
+            branch
+        };
 
-    if (currentSha) {
-        payload.sha = currentSha;
+        if (sha) {
+            payload.sha = sha;
+        }
+
+        const putResponse = await fetch(apiBase, {
+            method: "PUT",
+            headers: commonHeaders,
+            body: JSON.stringify(payload)
+        });
+
+        const putResult = await putResponse.json().catch(() => ({}));
+        return { putResponse, putResult };
     }
 
-    const putResponse = await fetch(apiBase, {
-        method: "PUT",
-        headers: commonHeaders,
-        body: JSON.stringify(payload)
-    });
+    let { putResponse, putResult } = await putDataWithSha(currentSha);
 
-    const putResult = await putResponse.json().catch(() => ({}));
+    if (!putResponse.ok) {
+        const detailMessage = String(putResult?.message || "").toLowerCase();
+        const isShaConflict = putResponse.status === 409 || (putResponse.status === 422 && detailMessage.includes("sha"));
+
+        if (isShaConflict) {
+            try {
+                const refreshed = await fetchCurrentSha();
+                ({ putResponse, putResult } = await putDataWithSha(refreshed.sha));
+            } catch (error) {
+                return res.status(error.statusCode || 500).json({
+                    error: error.message || "Failed to refresh file SHA",
+                    details: error.details || null,
+                    statusCode: error.statusCode || 500,
+                    hint: error.hint || "Retry after reloading latest data.json."
+                });
+            }
+        }
+    }
+
     if (!putResponse.ok) {
         return res.status(putResponse.status).json({
             error: "Failed to update data.json",
-            details: putResult
+            details: putResult,
+            statusCode: putResponse.status,
+            hint: putResponse.status === 409
+                ? "Update conflict detected. Reload latest data.json and try again."
+                : "Check repository permissions and branch protection rules."
         });
     }
 

@@ -87,6 +87,23 @@
             border: 1px solid var(--border);
         }
 
+        .btn-danger {
+            background: #5e1d22;
+            color: #ffd9dc;
+            border: 1px solid #7b2d33;
+        }
+
+        .text-input {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #0b1718;
+            color: #f7fbfa;
+            padding: 10px 12px;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 0.9rem;
+        }
+
         textarea {
             width: 100%;
             min-height: 560px;
@@ -123,6 +140,88 @@
             font-family: monospace;
             font-size: 0.9rem;
         }
+
+        .search-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .search-toolbar .text-input {
+            flex: 1 1 320px;
+        }
+
+        .search-results {
+            margin-top: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #0f2324;
+            max-height: 220px;
+            overflow: auto;
+        }
+
+        .result-row {
+            width: 100%;
+            text-align: left;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            color: #e4f0ef;
+            padding: 10px 12px;
+            border-bottom: 1px solid #2a4848;
+            font-size: 0.86rem;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-row:hover {
+            transform: none;
+            background: rgba(234, 165, 33, 0.14);
+        }
+
+        .result-row.is-selected {
+            background: rgba(234, 165, 33, 0.24);
+            color: #ffe8b9;
+        }
+
+        .form-grid {
+            margin-top: 14px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-label {
+            font-size: 0.84rem;
+            color: #bfd4d2;
+            font-weight: 700;
+        }
+
+        .field textarea {
+            min-height: 100px;
+        }
+
+        .field.field-wide {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 780px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            textarea {
+                min-height: 420px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -146,12 +245,77 @@
                 형식은 <span class="inline-code">[{ "id": "seoul-광장", "country": "대한민국", "city": "서울", "lat": 37.5665, "lng": 126.9780, "title": "광장", "author": "최인훈", "desc": "설명" }]</span> 형태로 입력하면 됩니다.
             </div>
         </section>
+
+        <section class="card">
+            <p>항목 검색 후 선택해서 필드 단위로 수정할 수 있습니다.</p>
+            <div class="search-toolbar" style="margin-top: 12px;">
+                <input id="search-input" class="text-input" type="text" placeholder="id / title / city / author / desc 검색" />
+                <button type="button" class="btn-secondary" id="search-btn">검색</button>
+                <button type="button" class="btn-secondary" id="clear-search-btn">초기화</button>
+            </div>
+            <div class="search-results" id="search-results"></div>
+
+            <div class="form-grid">
+                <label class="field">
+                    <span class="field-label">id (선택)</span>
+                    <input id="edit-id" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">country</span>
+                    <input id="edit-country" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">city</span>
+                    <input id="edit-city" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">lat</span>
+                    <input id="edit-lat" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">lng</span>
+                    <input id="edit-lng" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">title</span>
+                    <input id="edit-title" class="text-input" type="text" />
+                </label>
+                <label class="field">
+                    <span class="field-label">author</span>
+                    <input id="edit-author" class="text-input" type="text" />
+                </label>
+                <label class="field field-wide">
+                    <span class="field-label">desc</span>
+                    <textarea id="edit-desc" spellcheck="false"></textarea>
+                </label>
+            </div>
+
+            <div class="toolbar">
+                <button type="button" class="btn-primary" id="apply-item-update-btn">선택 항목 반영</button>
+                <button type="button" class="btn-danger" id="delete-item-btn">선택 항목 삭제</button>
+                <button type="button" class="btn-secondary" id="clear-edit-form-btn">수정 폼 초기화</button>
+            </div>
+        </section>
     </div>
 
     <script>
         const editor = document.getElementById("json-editor");
         const statusMessage = document.getElementById("status-message");
         const fileInput = document.getElementById("json-file-input");
+        const searchInput = document.getElementById("search-input");
+        const searchResults = document.getElementById("search-results");
+        const editFields = {
+            id: document.getElementById("edit-id"),
+            country: document.getElementById("edit-country"),
+            city: document.getElementById("edit-city"),
+            lat: document.getElementById("edit-lat"),
+            lng: document.getElementById("edit-lng"),
+            title: document.getElementById("edit-title"),
+            author: document.getElementById("edit-author"),
+            desc: document.getElementById("edit-desc")
+        };
+        let matchedIndexes = [];
+        let selectedIndex = null;
 
         function setStatus(message) {
             statusMessage.textContent = message;
@@ -174,21 +338,242 @@
 
         function populateExample() {
             editor.value = getDefaultJson();
+            clearSearchState(false);
             setStatus("예시 데이터로 채웠습니다.");
         }
 
-        function validateJson() {
+        function parseEditorArray(announce = false) {
             try {
                 const parsed = JSON.parse(editor.value);
                 if (!Array.isArray(parsed)) {
                     throw new Error("최상위는 배열이어야 합니다.");
                 }
-                setStatus(`JSON 검증 완료: ${parsed.length}개 작품 데이터입니다.`);
+                if (announce) {
+                    setStatus(`JSON 검증 완료: ${parsed.length}개 작품 데이터입니다.`);
+                }
                 return parsed;
             } catch (error) {
-                setStatus(`JSON 검증 실패: ${error.message}`);
+                if (announce) {
+                    setStatus(`JSON 검증 실패: ${error.message}`);
+                }
                 return null;
             }
+        }
+
+        function fillEditForm(item) {
+            editFields.id.value = String(item?.id ?? "");
+            editFields.country.value = String(item?.country ?? "");
+            editFields.city.value = String(item?.city ?? "");
+            editFields.lat.value = String(item?.lat ?? "");
+            editFields.lng.value = String(item?.lng ?? "");
+            editFields.title.value = String(item?.title ?? "");
+            editFields.author.value = String(item?.author ?? "");
+            editFields.desc.value = String(item?.desc ?? "");
+        }
+
+        function clearEditForm() {
+            fillEditForm({});
+        }
+
+        function getResultLabel(item, index) {
+            const id = String(item?.id || "(id 없음)");
+            const title = String(item?.title || "(제목 없음)");
+            const city = String(item?.city || "(도시 없음)");
+            return `#${index + 1} ${id} | ${title} | ${city}`;
+        }
+
+        function renderSearchResults(items) {
+            searchResults.innerHTML = "";
+            if (!matchedIndexes.length) {
+                const empty = document.createElement("div");
+                empty.className = "result-row";
+                empty.textContent = "검색 결과가 없습니다.";
+                searchResults.appendChild(empty);
+                return;
+            }
+
+            matchedIndexes.forEach((index) => {
+                const row = document.createElement("button");
+                row.type = "button";
+                row.className = "result-row" + (selectedIndex === index ? " is-selected" : "");
+                row.textContent = getResultLabel(items[index], index);
+                row.addEventListener("click", () => selectResult(index));
+                searchResults.appendChild(row);
+            });
+        }
+
+        function selectResult(index) {
+            const parsed = parseEditorArray();
+            if (!parsed) {
+                setStatus("JSON 형식이 올바르지 않아 항목을 열 수 없습니다.");
+                return;
+            }
+
+            const item = parsed[index];
+            if (!item) {
+                setStatus("선택한 항목을 찾을 수 없습니다. 다시 검색해 주세요.");
+                return;
+            }
+
+            selectedIndex = index;
+            fillEditForm(item);
+            renderSearchResults(parsed);
+            setStatus(`항목 #${index + 1}을 수정 폼으로 불러왔습니다.`);
+        }
+
+        function searchItems() {
+            const keyword = searchInput.value.trim();
+            if (!keyword) {
+                setStatus("검색어를 입력해 주세요.");
+                return;
+            }
+
+            const parsed = parseEditorArray();
+            if (!parsed) {
+                setStatus("검색 전에 JSON 형식을 먼저 확인해 주세요.");
+                return;
+            }
+
+            const query = keyword.toLowerCase();
+            const fields = ["id", "country", "city", "title", "author", "desc"];
+
+            matchedIndexes = [];
+            parsed.forEach((item, index) => {
+                const isMatched = fields.some((key) => String(item?.[key] ?? "").toLowerCase().includes(query));
+                if (isMatched) {
+                    matchedIndexes.push(index);
+                }
+            });
+
+            selectedIndex = null;
+            clearEditForm();
+            renderSearchResults(parsed);
+            if (!matchedIndexes.length) {
+                setStatus("검색 결과가 없습니다.");
+                return;
+            }
+            setStatus(`검색 완료: ${matchedIndexes.length}개 항목을 찾았습니다.`);
+        }
+
+        function clearSearchState(showMessage = true) {
+            searchInput.value = "";
+            matchedIndexes = [];
+            selectedIndex = null;
+            clearEditForm();
+            searchResults.innerHTML = "";
+            if (showMessage) {
+                setStatus("검색과 수정 폼을 초기화했습니다.");
+            }
+        }
+
+        function applyItemUpdate() {
+            if (selectedIndex === null) {
+                setStatus("검색 결과에서 수정할 항목을 먼저 선택해 주세요.");
+                return;
+            }
+
+            const requiredFields = ["country", "city", "lat", "lng", "title", "author", "desc"];
+            const missingField = requiredFields.find((key) => !String(editFields[key].value || "").trim());
+            if (missingField) {
+                setStatus(`필수 필드가 비어 있습니다: ${missingField}`);
+                return;
+            }
+
+            const latNum = Number(editFields.lat.value);
+            const lngNum = Number(editFields.lng.value);
+            if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+                setStatus("lat/lng는 숫자여야 합니다.");
+                return;
+            }
+
+            const parsed = parseEditorArray();
+            if (!parsed) {
+                setStatus("JSON 형식 오류가 있어 반영할 수 없습니다.");
+                return;
+            }
+
+            const existing = parsed[selectedIndex];
+            if (!existing) {
+                setStatus("선택한 항목을 찾지 못했습니다. 다시 검색해 주세요.");
+                return;
+            }
+
+            const generatedIdBase = (editFields.city.value + "-" + editFields.title.value)
+                .trim()
+                .replace(/\s+/g, "-");
+
+            parsed[selectedIndex] = {
+                id: (editFields.id.value || String(existing.id || "") || generatedIdBase || ("item-" + Date.now())).trim(),
+                country: editFields.country.value.trim(),
+                city: editFields.city.value.trim(),
+                lat: latNum,
+                lng: lngNum,
+                title: editFields.title.value.trim(),
+                author: editFields.author.value.trim(),
+                desc: editFields.desc.value.trim()
+            };
+
+            editor.value = JSON.stringify(parsed, null, 2);
+
+            const currentQuery = searchInput.value.trim();
+            if (currentQuery) {
+                searchItems();
+                if (matchedIndexes.includes(selectedIndex)) {
+                    selectResult(selectedIndex);
+                }
+            }
+
+            setStatus("선택 항목을 JSON에 반영했습니다. 저장하기 버튼으로 파일 저장이 가능합니다.");
+        }
+
+        function deleteSelectedItem() {
+            if (selectedIndex === null) {
+                setStatus("검색 결과에서 삭제할 항목을 먼저 선택해 주세요.");
+                return;
+            }
+
+            const parsed = parseEditorArray();
+            if (!parsed) {
+                setStatus("JSON 형식 오류가 있어 항목을 삭제할 수 없습니다.");
+                return;
+            }
+
+            const target = parsed[selectedIndex];
+            if (!target) {
+                setStatus("선택한 항목을 찾지 못했습니다. 다시 검색해 주세요.");
+                return;
+            }
+
+            const targetLabel = [
+                String(target.id || "(id 없음)"),
+                String(target.title || "(제목 없음)"),
+                String(target.city || "(도시 없음)")
+            ].join(" | ");
+
+            const shouldDelete = window.confirm("정말 삭제할까요?\n" + targetLabel);
+            if (!shouldDelete) {
+                setStatus("삭제를 취소했습니다.");
+                return;
+            }
+
+            parsed.splice(selectedIndex, 1);
+            editor.value = JSON.stringify(parsed, null, 2);
+
+            selectedIndex = null;
+            clearEditForm();
+
+            const currentQuery = searchInput.value.trim();
+            if (currentQuery) {
+                searchItems();
+            } else {
+                searchResults.innerHTML = "";
+            }
+
+            setStatus("선택 항목을 삭제했습니다. 저장하기 버튼으로 파일 저장이 가능합니다.");
+        }
+
+        function validateJson() {
+            return parseEditorArray(true);
         }
 
         async function saveJson() {
@@ -232,6 +617,7 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const text = await response.text();
                 editor.value = text;
+                clearSearchState(false);
                 setStatus("현재 data.json 내용을 불러왔습니다.");
             } catch (error) {
                 setStatus(`현재 data.json을 불러오지 못했습니다: ${error.message}`);
@@ -242,6 +628,17 @@
         document.getElementById("validate-btn").addEventListener("click", validateJson);
         document.getElementById("save-btn").addEventListener("click", saveJson);
         document.getElementById("load-file-btn").addEventListener("click", () => fileInput.click());
+        document.getElementById("search-btn").addEventListener("click", searchItems);
+        document.getElementById("clear-search-btn").addEventListener("click", () => clearSearchState());
+        document.getElementById("apply-item-update-btn").addEventListener("click", applyItemUpdate);
+        document.getElementById("delete-item-btn").addEventListener("click", deleteSelectedItem);
+        document.getElementById("clear-edit-form-btn").addEventListener("click", clearEditForm);
+        searchInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchItems();
+            }
+        });
 
         fileInput.addEventListener("change", async (event) => {
             const file = event.target.files?.[0];
@@ -249,6 +646,7 @@
             try {
                 const text = await file.text();
                 editor.value = text;
+                clearSearchState(false);
                 setStatus(`${file.name} 파일을 불러왔습니다.`);
             } catch (error) {
                 setStatus(`파일 읽기 실패: ${error.message}`);

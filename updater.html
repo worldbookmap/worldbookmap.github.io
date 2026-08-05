@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>데이터 편집기 (Vue)</title>
+    <title>데이터 편집기</title>
     <style>
         :root {
             color-scheme: dark;
@@ -115,6 +115,12 @@
             background: var(--panel-2);
             color: var(--text);
             border: 1px solid var(--border);
+        }
+
+        .btn-danger {
+            background: #5e1d22;
+            color: #ffd9dc;
+            border: 1px solid #7b2d33;
         }
 
         .json-editor {
@@ -283,6 +289,61 @@
             flex-wrap: wrap;
         }
 
+        .search-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .search-results {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            border: 1px solid #2b4b4d;
+            border-radius: 10px;
+            background: #0d1f20;
+            max-height: 220px;
+            overflow: auto;
+        }
+
+        .search-results li + li {
+            border-top: 1px solid #244244;
+        }
+
+        .result-btn {
+            width: 100%;
+            text-align: left;
+            border-radius: 0;
+            border: none;
+            background: transparent;
+            color: #dcebea;
+            padding: 9px 10px;
+            font-size: 0.86rem;
+        }
+
+        .result-btn:hover {
+            transform: none;
+            background: rgba(234, 165, 33, 0.14);
+        }
+
+        .result-btn.is-selected {
+            background: rgba(234, 165, 33, 0.24);
+            color: #ffe7b6;
+        }
+
+        .result-index {
+            color: #a8bfbd;
+            font-size: 0.78rem;
+            margin-right: 6px;
+        }
+
+        .result-meta {
+            margin-top: 10px;
+            font-size: 0.84rem;
+            color: #b6cfcd;
+        }
+
         .status {
             min-height: 22px;
             color: var(--accent-soft);
@@ -337,7 +398,7 @@
 <body>
     <div id="app" class="page">
         <section class="card">
-            <h1>데이터 편집기 (Vue)</h1>
+            <h1>데이터 편집기</h1>
             <p>책 지도에 필요한 데이터를 입력하고 검증한 뒤 서버의 data.json으로 반영할 수 있습니다.</p>
             <div class="toolbar">
                 <button type="button" class="btn-primary" @click="populateExample">예시 데이터 불러오기</button>
@@ -363,9 +424,15 @@
                 <button
                     type="button"
                     class="tab-btn"
-                    :class="{ 'is-active': activeTab === 'item' }"
-                    @click="activeTab = 'item'"
+                    :class="{ 'is-active': activeTab === 'item-add' }"
+                    @click="activeTab = 'item-add'"
                 >새 항목 추가</button>
+                <button
+                    type="button"
+                    class="tab-btn"
+                    :class="{ 'is-active': activeTab === 'item-edit' }"
+                    @click="activeTab = 'item-edit'"
+                >항목 검색/수정</button>
             </div>
 
             <transition name="fade-tab" mode="out-in">
@@ -379,7 +446,7 @@
                         </div>
                     </div>
 
-                    <div v-else class="tab-panel tab-panel-form">
+                    <div v-else-if="activeTab === 'item-add'" class="tab-panel tab-panel-form">
                         <div class="form-grid">
                             <label class="form-row">
                                 <span class="form-label">id (선택)</span>
@@ -419,6 +486,79 @@
                             <button type="button" class="btn-secondary" @click="resetNewItemForm">필드 초기화</button>
                         </div>
                     </div>
+
+                    <div v-else class="tab-panel tab-panel-form">
+                        <div class="search-row">
+                            <input
+                                v-model.trim="searchQuery"
+                                class="text-input"
+                                type="text"
+                                placeholder="id / title / city / author / desc 로 검색"
+                                @keydown.enter.prevent="searchItems"
+                            />
+                            <button type="button" class="btn-secondary" @click="searchItems">검색</button>
+                            <button type="button" class="btn-secondary" @click="clearSearch">초기화</button>
+                        </div>
+
+                        <ul v-if="searchResults.length" class="search-results">
+                            <li v-for="result in searchResults" :key="result.index">
+                                <button
+                                    type="button"
+                                    class="result-btn"
+                                    :class="{ 'is-selected': selectedItemIndex === result.index }"
+                                    @click="selectSearchResult(result.index)"
+                                >
+                                    <span class="result-index">#{{ result.index + 1 }}</span>
+                                    {{ result.label }}
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div v-if="selectedItemIndex !== null" class="result-meta">
+                            선택된 항목 인덱스: {{ selectedItemIndex + 1 }}
+                        </div>
+
+                        <div class="form-grid" style="margin-top: 12px;">
+                            <label class="form-row">
+                                <span class="form-label">id (선택)</span>
+                                <input v-model.trim="editItem.id" class="text-input" type="text" placeholder="예: Tokyo-마음" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">country</span>
+                                <input v-model.trim="editItem.country" class="text-input" type="text" placeholder="예: 일본" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">city</span>
+                                <input v-model.trim="editItem.city" class="text-input" type="text" placeholder="예: 도쿄" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">lat</span>
+                                <input v-model.trim="editItem.lat" class="text-input" type="text" placeholder="예: 35.6762" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">lng</span>
+                                <input v-model.trim="editItem.lng" class="text-input" type="text" placeholder="예: 139.6503" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">title</span>
+                                <input v-model.trim="editItem.title" class="text-input" type="text" placeholder="예: 작품 제목" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">author</span>
+                                <input v-model.trim="editItem.author" class="text-input" type="text" placeholder="예: 저자명" />
+                            </label>
+                            <label class="form-row">
+                                <span class="form-label">desc</span>
+                                <textarea class="desc-editor" v-model.trim="editItem.desc" spellcheck="false"></textarea>
+                            </label>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-primary" @click="updateSelectedItem">선택 항목 반영</button>
+                            <button type="button" class="btn-danger" @click="deleteSelectedItem">선택 항목 삭제</button>
+                            <button type="button" class="btn-secondary" @click="clearEditForm">수정 폼 초기화</button>
+                        </div>
+                    </div>
                 </div>
             </transition>
 
@@ -443,7 +583,20 @@
                 const activeTab = ref("json");
                 const jsonEditorRef = ref(null);
                 const isJsonFlash = ref(false);
+                const searchQuery = ref("");
+                const searchResults = ref([]);
+                const selectedItemIndex = ref(null);
                 const newItem = reactive({
+                    id: "",
+                    country: "",
+                    city: "",
+                    lat: "",
+                    lng: "",
+                    title: "",
+                    author: "",
+                    desc: ""
+                });
+                const editItem = reactive({
                     id: "",
                     country: "",
                     city: "",
@@ -488,6 +641,36 @@
                     newItem.title = "";
                     newItem.author = "";
                     newItem.desc = "";
+                }
+
+                function clearEditForm() {
+                    editItem.id = "";
+                    editItem.country = "";
+                    editItem.city = "";
+                    editItem.lat = "";
+                    editItem.lng = "";
+                    editItem.title = "";
+                    editItem.author = "";
+                    editItem.desc = "";
+                }
+
+                function parseEditorArray(announce = false) {
+                    try {
+                        const parsed = JSON.parse(editorValue.value);
+                        if (!Array.isArray(parsed)) {
+                            throw new Error("최상위는 배열이어야 합니다.");
+                        }
+
+                        if (announce) {
+                            setStatus("JSON 검증 완료: " + parsed.length + "개 작품 데이터입니다.");
+                        }
+                        return parsed;
+                    } catch (error) {
+                        if (announce) {
+                            setStatus("JSON 검증 실패: " + error.message, "error");
+                        }
+                        return null;
+                    }
                 }
 
                 function findFirstObjectRange(jsonText) {
@@ -623,18 +806,198 @@
                     });
                 }
 
-                function validateJson() {
-                    try {
-                        const parsed = JSON.parse(editorValue.value);
-                        if (!Array.isArray(parsed)) {
-                            throw new Error("최상위는 배열이어야 합니다.");
-                        }
-                        setStatus("JSON 검증 완료: " + parsed.length + "개 작품 데이터입니다.");
-                        return parsed;
-                    } catch (error) {
-                        setStatus("JSON 검증 실패: " + error.message, "error");
-                        return null;
+                function searchItems() {
+                    const keyword = searchQuery.value.trim();
+                    if (!keyword) {
+                        setStatus("검색어를 입력해 주세요.", "error");
+                        return;
                     }
+
+                    const parsed = parseEditorArray();
+                    if (!parsed) {
+                        setStatus("검색 전에 JSON 형식을 먼저 확인해 주세요.", "error");
+                        return;
+                    }
+
+                    const query = keyword.toLowerCase();
+                    const fields = ["id", "country", "city", "title", "author", "desc"];
+                    const matched = [];
+
+                    parsed.forEach((entry, index) => {
+                        const hit = fields.some((field) => String(entry?.[field] ?? "").toLowerCase().includes(query));
+                        if (hit) {
+                            const label = [
+                                String(entry?.id || "(id 없음)"),
+                                String(entry?.title || "(제목 없음)"),
+                                String(entry?.city || "(도시 없음)")
+                            ].join(" | ");
+                            matched.push({ index, label });
+                        }
+                    });
+
+                    searchResults.value = matched;
+                    selectedItemIndex.value = null;
+                    clearEditForm();
+
+                    if (!matched.length) {
+                        setStatus("검색 결과가 없습니다.", "error");
+                        return;
+                    }
+
+                    setStatus("검색 완료: " + matched.length + "개 항목을 찾았습니다.");
+                }
+
+                function selectSearchResult(index) {
+                    const parsed = parseEditorArray();
+                    if (!parsed) {
+                        setStatus("JSON 형식을 확인한 뒤 다시 선택해 주세요.", "error");
+                        return;
+                    }
+
+                    const target = parsed[index];
+                    if (!target) {
+                        setStatus("선택한 항목을 찾지 못했습니다. 다시 검색해 주세요.", "error");
+                        return;
+                    }
+
+                    selectedItemIndex.value = index;
+                    editItem.id = String(target.id ?? "");
+                    editItem.country = String(target.country ?? "");
+                    editItem.city = String(target.city ?? "");
+                    editItem.lat = String(target.lat ?? "");
+                    editItem.lng = String(target.lng ?? "");
+                    editItem.title = String(target.title ?? "");
+                    editItem.author = String(target.author ?? "");
+                    editItem.desc = String(target.desc ?? "");
+
+                    setStatus("선택한 항목을 수정 폼에 불러왔습니다.");
+                }
+
+                function clearSearch() {
+                    searchQuery.value = "";
+                    searchResults.value = [];
+                    selectedItemIndex.value = null;
+                    clearEditForm();
+                    setStatus("검색 상태를 초기화했습니다.");
+                }
+
+                function updateSelectedItem() {
+                    if (selectedItemIndex.value === null) {
+                        setStatus("검색 결과에서 수정할 항목을 먼저 선택해 주세요.", "error");
+                        return;
+                    }
+
+                    const requiredFields = ["country", "city", "lat", "lng", "title", "author", "desc"];
+                    const missingField = requiredFields.find((key) => !String(editItem[key] || "").trim());
+                    if (missingField) {
+                        setStatus("필수 필드가 비어 있습니다: " + missingField, "error");
+                        return;
+                    }
+
+                    const latNum = Number(editItem.lat);
+                    const lngNum = Number(editItem.lng);
+                    if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+                        setStatus("lat/lng는 숫자여야 합니다.", "error");
+                        return;
+                    }
+
+                    const parsed = parseEditorArray();
+                    if (!parsed) {
+                        setStatus("JSON 형식 오류가 있어 항목을 반영할 수 없습니다.", "error");
+                        return;
+                    }
+
+                    const index = selectedItemIndex.value;
+                    const existing = parsed[index];
+                    if (!existing) {
+                        setStatus("선택한 항목 인덱스가 유효하지 않습니다. 다시 검색해 주세요.", "error");
+                        return;
+                    }
+
+                    const generatedIdBase = (editItem.city + "-" + editItem.title)
+                        .trim()
+                        .replace(/\s+/g, "-");
+
+                    parsed[index] = {
+                        id: (editItem.id || String(existing.id || "") || generatedIdBase || ("item-" + Date.now())).trim(),
+                        country: editItem.country.trim(),
+                        city: editItem.city.trim(),
+                        lat: latNum,
+                        lng: lngNum,
+                        title: editItem.title.trim(),
+                        author: editItem.author.trim(),
+                        desc: editItem.desc.trim()
+                    };
+
+                    editorValue.value = JSON.stringify(parsed, null, 2);
+                    const updated = parsed[index];
+                    const query = searchQuery.value.trim().toLowerCase();
+                    if (query) {
+                        searchResults.value = searchResults.value.map((result) => {
+                            if (result.index !== index) return result;
+                            return {
+                                index,
+                                label: [
+                                    String(updated?.id || "(id 없음)"),
+                                    String(updated?.title || "(제목 없음)"),
+                                    String(updated?.city || "(도시 없음)")
+                                ].join(" | ")
+                            };
+                        });
+                    }
+
+                    setStatus("선택한 항목을 JSON에 반영했습니다. 필요하면 '서버 반영'을 눌러 저장해 주세요.");
+                }
+
+                function deleteSelectedItem() {
+                    if (selectedItemIndex.value === null) {
+                        setStatus("검색 결과에서 삭제할 항목을 먼저 선택해 주세요.", "error");
+                        return;
+                    }
+
+                    const parsed = parseEditorArray();
+                    if (!parsed) {
+                        setStatus("JSON 형식 오류가 있어 항목을 삭제할 수 없습니다.", "error");
+                        return;
+                    }
+
+                    const index = selectedItemIndex.value;
+                    const target = parsed[index];
+                    if (!target) {
+                        setStatus("선택한 항목 인덱스가 유효하지 않습니다. 다시 검색해 주세요.", "error");
+                        return;
+                    }
+
+                    const targetLabel = [
+                        String(target.id || "(id 없음)"),
+                        String(target.title || "(제목 없음)"),
+                        String(target.city || "(도시 없음)")
+                    ].join(" | ");
+
+                    const shouldDelete = window.confirm("정말 삭제할까요?\n" + targetLabel);
+                    if (!shouldDelete) {
+                        setStatus("삭제를 취소했습니다.");
+                        return;
+                    }
+
+                    parsed.splice(index, 1);
+                    editorValue.value = JSON.stringify(parsed, null, 2);
+
+                    selectedItemIndex.value = null;
+                    clearEditForm();
+
+                    const query = searchQuery.value.trim();
+                    if (query) {
+                        searchItems();
+                    } else {
+                        searchResults.value = [];
+                    }
+
+                    setStatus("선택한 항목을 삭제했습니다. 필요하면 '서버 반영'을 눌러 저장해 주세요.");
+                }
+
+                function validateJson() {
+                    return parseEditorArray(true);
                 }
 
                 async function applyChangesToServer(preparedData, options = {}) {
@@ -669,10 +1032,13 @@
 
                         const result = await response.json().catch(() => ({}));
                         if (!response.ok) {
+                            const detailsText = typeof result.details === "string"
+                                ? result.details
+                                : (result.details ? JSON.stringify(result.details) : "");
                             const detailParts = [];
                             if (result.error) detailParts.push(result.error);
                             if (result.statusCode) detailParts.push("status=" + result.statusCode);
-                            if (result.details) detailParts.push("details=" + result.details);
+                            if (detailsText) detailParts.push("details=" + detailsText);
                             if (result.hint) detailParts.push("hint=" + result.hint);
                             if (!detailParts.length) detailParts.push("HTTP " + response.status);
                             throw new Error(detailParts.join(" | "));
@@ -719,10 +1085,20 @@
                     jsonEditorRef,
                     isJsonFlash,
                     newItem,
+                    editItem,
+                    searchQuery,
+                    searchResults,
+                    selectedItemIndex,
                     populateExample,
                     loadCurrentJson,
                     prependItemToJson,
                     resetNewItemForm,
+                    searchItems,
+                    selectSearchResult,
+                    clearSearch,
+                    clearEditForm,
+                    updateSelectedItem,
+                    deleteSelectedItem,
                     validateJson,
                     applyChangesToServer
                 };
