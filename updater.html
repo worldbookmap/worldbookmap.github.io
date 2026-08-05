@@ -1035,11 +1035,15 @@
                             const detailsText = typeof result.details === "string"
                                 ? result.details
                                 : (result.details ? JSON.stringify(result.details) : "");
+                            const statusCode = Number(result.statusCode || response.status || 0);
                             const detailParts = [];
                             if (result.error) detailParts.push(result.error);
-                            if (result.statusCode) detailParts.push("status=" + result.statusCode);
+                            if (statusCode) detailParts.push("status=" + statusCode);
                             if (detailsText) detailParts.push("details=" + detailsText);
                             if (result.hint) detailParts.push("hint=" + result.hint);
+                            if (statusCode === 401) {
+                                detailParts.push("편집 인증키를 확인해 주세요(입력값과 Vercel EDITOR_API_KEY 일치 필요)");
+                            }
                             if (!detailParts.length) detailParts.push("HTTP " + response.status);
                             throw new Error(detailParts.join(" | "));
                         }

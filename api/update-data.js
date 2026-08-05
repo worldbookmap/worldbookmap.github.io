@@ -7,7 +7,11 @@ export default async function handler(req, res) {
     const expectedEditorKey = process.env.EDITOR_API_KEY;
     const requestEditorKey = req.headers["x-editor-key"];
     if (expectedEditorKey && requestEditorKey !== expectedEditorKey) {
-        return res.status(401).json({ error: "Unauthorized" });
+        return res.status(401).json({
+            error: "Unauthorized",
+            statusCode: 401,
+            hint: "updater 페이지의 편집 인증키가 Vercel 환경변수 EDITOR_API_KEY와 일치해야 합니다. 키를 다시 입력한 뒤 재시도하세요."
+        });
     }
 
     const githubToken = (process.env.GITHUB_TOKEN || process.env.WBM || "").trim();
