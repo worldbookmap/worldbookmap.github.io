@@ -1130,7 +1130,7 @@
                     const popupCoverSection = coverState.status === "loaded" && coverState.thumbnail
                         ? "<img src=\"" + coverState.thumbnail + "\" alt=\"" + workTitle + " 표지\" style=\"display:block; width:100%; max-width:180px; height:auto; border-radius:8px; margin:0 0 0.5rem; border:1px solid #2f4f50;\" loading=\"lazy\" />"
                         : "";
-                    const popupContent = "<div class=\"map-popup-card\">"
+                    const popupContent = "<div class=\"map-popup-card\" data-popup-item-id=\"" + item.id + "\">"
                         + popupCoverSection
                         + "<div class=\"map-popup-top\">"
                         + "<span class=\"map-popup-location-chip\">" + popupFlag + (item.city || "지역") + "</span>"
@@ -1301,6 +1301,14 @@
                     clickOutsideHandler = (event) => {
                         const clickedWorkButton = event.target.closest("button.simple-work-link");
                         const clickedPopup = event.target.closest(".leaflet-popup");
+                        if (clickedPopup) {
+                            const popupItem = event.target.closest("[data-popup-item-id]");
+                            const popupItemId = popupItem ? popupItem.getAttribute("data-popup-item-id") : "";
+                            if (popupItemId) {
+                                selectItem(popupItemId, { openPanel: true });
+                            }
+                            return;
+                        }
                         if (clickedWorkButton || clickedPopup) return;
                         map.closePopup();
                     };
