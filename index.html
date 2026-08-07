@@ -32,6 +32,111 @@
             overflow-y: auto;
         }
 
+        .intro-fade-enter-active,
+        .intro-fade-leave-active {
+            transition: opacity 0.5s ease;
+        }
+
+        .intro-fade-enter-from,
+        .intro-fade-leave-to {
+            opacity: 0;
+        }
+
+        .intro-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background:
+                radial-gradient(circle at 18% 20%, rgba(63, 143, 122, 0.18), transparent 48%),
+                radial-gradient(circle at 82% 76%, rgba(234, 165, 33, 0.16), transparent 46%),
+                #0a1617;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.2rem;
+            cursor: pointer;
+        }
+
+        .intro-inner {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+        }
+
+        .intro-map-art {
+            width: min(58vw, 360px);
+            aspect-ratio: 1 / 1;
+            border-radius: 24px;
+            border: 1px solid #295153;
+            background: linear-gradient(135deg, #112b2d, #0f2324);
+            box-shadow: 0 18px 40px rgba(1, 12, 13, 0.48);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            animation: intro-map-rise 0.9s ease both;
+        }
+
+        .intro-map-art svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .intro-vertical-copy {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            letter-spacing: 0.18em;
+            font-family: "Nanum Myeongjo", "Times New Roman", serif;
+            font-weight: 700;
+            font-size: clamp(1.2rem, 2.6vw, 2rem);
+            color: #e8f5f2;
+            text-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+            animation: intro-copy-glow 1.1s ease 0.2s both;
+        }
+
+        .intro-skip-hint {
+            position: absolute;
+            bottom: 1.45rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #9cc4be;
+            border: 1px solid rgba(159, 196, 190, 0.35);
+            border-radius: 999px;
+            padding: 0.35rem 0.72rem;
+            font-size: 0.74rem;
+            letter-spacing: 0.04em;
+            background: rgba(9, 27, 29, 0.68);
+        }
+
+        @keyframes intro-map-rise {
+            0% {
+                transform: translateY(14px) scale(0.965);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes intro-copy-glow {
+            0% {
+                opacity: 0;
+                transform: translateX(-8px);
+                text-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            }
+            65% {
+                opacity: 1;
+                text-shadow: 0 8px 26px rgba(234, 165, 33, 0.2);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+                text-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+            }
+        }
+
         header {
             background: #0e1e1f;
             color: white;
@@ -389,6 +494,75 @@
             color: #d8efeb;
         }
 
+        .map-popup-card {
+            font-size: 0.83rem;
+            line-height: 1.5;
+            max-width: 236px;
+            color: #e9f5f3;
+            background: #0f2324;
+            border: 1px solid #294546;
+            border-radius: 12px;
+            padding: 0.62rem;
+            box-shadow: 0 8px 18px rgba(2, 18, 19, 0.28);
+        }
+
+        .map-popup-top {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .map-popup-location-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.32rem;
+            border: 1px solid #2f4f50;
+            border-radius: 999px;
+            background: #173536;
+            color: #eaa521;
+            font-weight: 700;
+            padding: 0.19rem 0.55rem;
+            white-space: nowrap;
+        }
+
+        .map-popup-title {
+            margin: 0.2rem 0 0.28rem;
+            font-weight: 700;
+            color: #d8efeb;
+            font-size: 0.95rem;
+        }
+
+        .map-popup-author {
+            color: #b8d3d0;
+            margin-bottom: 0.3rem;
+            font-size: 0.8rem;
+        }
+
+        .map-popup-desc {
+            color: #d7e6e3;
+            font-size: 0.81rem;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 12px;
+            padding: 0;
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            min-width: 0;
+        }
+
+        .leaflet-popup-tip {
+            background: #0f2324;
+            border: 1px solid #294546;
+            box-shadow: none;
+        }
+
         .country-flag {
             vertical-align: -0.1em;
             margin-right: 0.35rem;
@@ -401,6 +575,20 @@
         }
 
         @media (max-width: 860px) {
+            .intro-inner {
+                gap: 0.85rem;
+            }
+
+            .intro-map-art {
+                width: min(66vw, 280px);
+                border-radius: 18px;
+            }
+
+            .intro-vertical-copy {
+                font-size: clamp(1rem, 3.8vw, 1.45rem);
+                letter-spacing: 0.13em;
+            }
+
             .main-container {
                 flex-direction: column;
                 height: auto;
@@ -427,6 +615,62 @@
 </head>
 <body>
     <div id="app">
+        <transition name="intro-fade">
+            <div
+                v-if="showIntro"
+                class="intro-overlay"
+                role="button"
+                tabindex="0"
+                aria-live="polite"
+                aria-label="첫 로딩 화면"
+                @click="dismissIntro"
+                @keydown.enter.prevent="dismissIntro"
+                @keydown.space.prevent="dismissIntro"
+            >
+                <div class="intro-inner">
+                    <div class="intro-map-art" aria-hidden="true">
+                        <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" fill="none">
+                            <defs>
+                                <linearGradient id="seaGrad" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#174144"/>
+                                    <stop offset="1" stop-color="#0f2c2d"/>
+                                </linearGradient>
+                                <radialGradient id="globeGlow" cx="0.38" cy="0.34" r="0.72">
+                                    <stop offset="0" stop-color="#2a6a64" stop-opacity="0.28"/>
+                                    <stop offset="1" stop-color="#0f2c2d" stop-opacity="0"/>
+                                </radialGradient>
+                                <clipPath id="globeClip">
+                                    <circle cx="120" cy="120" r="88"/>
+                                </clipPath>
+                            </defs>
+                            <rect x="8" y="8" width="224" height="224" rx="18" fill="#102c2d" stroke="#2d5a5b"/>
+                            <circle cx="120" cy="120" r="88" fill="url(#seaGrad)" stroke="#2d6869" stroke-width="2"/>
+                            <g clip-path="url(#globeClip)">
+                                <circle cx="120" cy="120" r="88" fill="url(#globeGlow)"/>
+                                <path d="M120 32V208M84 40V200M156 40V200M32 120H208M40 84H200M40 156H200" stroke="#85b9b2" opacity="0.22" stroke-width="1"/>
+
+                                <path d="M55 90C59 82 67 74 77 71C86 68 99 69 106 75C113 80 114 89 110 97C106 105 96 110 87 113C79 116 75 122 74 130C73 138 69 144 63 146C57 148 51 145 48 139C45 133 46 126 49 119C52 111 50 100 55 90Z" fill="#2d8b78" opacity="0.96"/>
+                                <path d="M75 131C80 131 85 134 88 140C90 146 89 153 86 161C83 168 78 175 71 177C64 179 57 176 55 170C53 164 55 156 60 149C64 143 69 136 75 131Z" fill="#2d8b78" opacity="0.96"/>
+                                <path d="M94 66C98 61 105 60 110 63C114 66 114 72 109 75C104 78 97 77 94 73C92 71 92 68 94 66Z" fill="#2d8b78" opacity="0.92"/>
+
+                                <path d="M117 86C126 78 139 73 153 73C167 73 180 79 188 88C194 95 195 106 189 112C183 118 172 119 162 117C154 116 147 118 144 123C141 129 142 136 145 143C148 150 147 157 141 161C133 166 120 166 112 160C104 154 101 145 101 136C101 127 106 119 112 112C117 106 119 98 117 92C117 90 117 88 117 86Z" fill="#2d8b78" opacity="0.96"/>
+                                <path d="M123 124C127 121 133 121 138 124C143 127 146 133 146 140C146 148 143 157 137 163C132 168 124 169 120 164C116 159 115 151 116 143C117 135 119 128 123 124Z" fill="#eaa521" opacity="0.84"/>
+                                <path d="M165 151C170 149 176 149 181 151C186 153 189 157 188 162C187 167 182 171 176 172C169 173 163 170 161 165C159 160 161 154 165 151Z" fill="#2d8b78" opacity="0.96"/>
+
+                                <path d="M64 96C72 98 80 97 88 94M130 92C145 87 163 89 176 96M121 147C129 146 138 145 145 148" stroke="#e8f5f2" stroke-width="1.5" stroke-linecap="round" opacity="0.52"/>
+                                <path d="M57 151C70 144 85 143 98 147C111 151 121 158 133 162C145 166 158 166 170 161" stroke="#f4d18a" stroke-width="2" stroke-linecap="round" opacity="0.76"/>
+                                <circle cx="73" cy="104" r="4" fill="#f4d18a"/>
+                                <circle cx="141" cy="110" r="4" fill="#f4d18a"/>
+                                <circle cx="174" cy="158" r="3.6" fill="#f4d18a"/>
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="intro-vertical-copy">세상에서 가장 우아한 놀이</div>
+                </div>
+                <div class="intro-skip-hint">화면을 클릭하면 바로 시작합니다</div>
+            </div>
+        </transition>
+
         <header>
             <h1><span class="header-title-accent"></span> <span class="header-title-strong">책으로</span> 여행하기</h1>
             <p>세상에서 가장 사치스럽고 우아한 놀이</p>
@@ -582,6 +826,11 @@
                 const selectedLocationKey = ref(null);
                 const expandedWorkKeys = ref(new Set());
                 const bookCoverCache = reactive({});
+                const showIntro = ref(true);
+
+                const introStartTime = Date.now();
+                const minimumIntroDuration = 5000;
+                let introTimer = null;
 
                 const uniqueLocations = [];
                 const markers = [];
@@ -620,19 +869,6 @@
                     return "표지 없음";
                 }
 
-                function getBookCoverApiCandidates() {
-                    const candidates = ["/api/book-cover"];
-                    const host = window.location.hostname;
-
-                    if (host === "localhost" || host === "127.0.0.1") {
-                        candidates.push("https://worldbookmap.vercel.app/api/book-cover");
-                    } else if (host.endsWith("github.io")) {
-                        candidates.push("https://worldbookmap.vercel.app/api/book-cover");
-                    }
-
-                    return candidates;
-                }
-
                 async function fetchBookCover(work) {
                     if (!work || !work.title) return;
 
@@ -651,40 +887,22 @@
                             params.set("author", work.author);
                         }
 
-                        const apiCandidates = getBookCoverApiCandidates();
-                        let payload = null;
-                        let lastErrorMessage = "";
-
-                        for (const endpoint of apiCandidates) {
+                        const response = await fetch("/api/book-cover?" + params.toString(), { cache: "no-store" });
+                        if (!response.ok) {
+                            let detail = "HTTP " + response.status;
                             try {
-                                const response = await fetch(endpoint + "?" + params.toString(), { cache: "no-store" });
-                                if (!response.ok) {
-                                    let detail = "HTTP " + response.status;
-                                    try {
-                                        const errorPayload = await response.json();
-                                        if (errorPayload && errorPayload.error) {
-                                            detail = errorPayload.error;
-                                        }
-                                    } catch {
-                                        // Ignore JSON parse failures for error response bodies.
-                                    }
-                                    lastErrorMessage = endpoint + " -> " + detail;
-                                    continue;
+                                const errorPayload = await response.json();
+                                if (errorPayload && errorPayload.error) {
+                                    detail = errorPayload.error;
                                 }
-
-                                payload = await response.json();
-                                break;
-                            } catch (error) {
-                                const message = error && error.message ? error.message : String(error);
-                                lastErrorMessage = endpoint + " -> " + message;
+                            } catch {
+                                // Ignore JSON parse failures for error response bodies.
                             }
+                            throw new Error("표지 조회 실패: " + detail);
                         }
 
-                        if (!payload) {
-                            throw new Error("표지 조회 실패: " + (lastErrorMessage || "API 응답 없음"));
-                        }
-
-                        const thumbnail = payload.thumbnail || "";
+                        const payload = await response.json();
+                        const thumbnail = payload?.thumbnail || "";
 
                         if (!thumbnail) {
                             bookCoverCache[cacheKey] = { status: "not-found", thumbnail: "" };
@@ -829,7 +1047,7 @@
                     });
                 }
 
-                function selectItem(itemId, options = {}) {
+                async function selectItem(itemId, options = {}) {
                     const openPanel = options.openPanel !== undefined ? options.openPanel : true;
                     const item = literatureData.value.find(entry => entry.id === itemId);
                     if (!item) return;
@@ -849,6 +1067,21 @@
                     const targetLng = getNearestWrappedLng(item.lng);
                     map.panTo([item.lat, targetLng], { animate: true, duration: 0.7 });
                     highlightMarkersBySelection(selectedLocationKey.value);
+
+                    await new Promise((resolve) => {
+                        let settled = false;
+                        const finish = () => {
+                            if (settled) return;
+                            settled = true;
+                            resolve();
+                        };
+
+                        const timer = setTimeout(finish, 900);
+                        map.once("moveend", () => {
+                            clearTimeout(timer);
+                            finish();
+                        });
+                    });
                 }
 
                 async function showLocationPopupByItemId(itemId) {
@@ -860,19 +1093,32 @@
                     const workTitle = item.title || "작품";
                     const workAuthor = item.author || "작가";
                     const coverState = getCoverState(item);
-                    const popupCoverSection = coverState.status === "loaded" && coverState.thumbnail
-                        ? "<img src=\"" + coverState.thumbnail + "\" alt=\"" + workTitle + " 표지\" style=\"display:block; width:100%; max-width:180px; height:auto; border-radius:8px; margin:0 0 0.5rem; border:1px solid #e2e8f0;\" loading=\"lazy\" />"
+                    const countryFlagCode = getCountryFlagCode(item.country || "");
+                    const popupFlag = countryFlagCode
+                        ? "<span class=\"country-flag fi fi-" + countryFlagCode + "\" aria-hidden=\"true\"></span>"
                         : "";
-                    const popupContent = "<div style=\"font-size: 0.86rem; line-height: 1.5; max-width: 220px;\">"
+                    const popupCoverSection = coverState.status === "loaded" && coverState.thumbnail
+                        ? "<img src=\"" + coverState.thumbnail + "\" alt=\"" + workTitle + " 표지\" style=\"display:block; width:100%; max-width:180px; height:auto; border-radius:8px; margin:0 0 0.5rem; border:1px solid #2f4f50;\" loading=\"lazy\" />"
+                        : "";
+                    const popupContent = "<div class=\"map-popup-card\">"
                         + popupCoverSection
-                        + "<strong>" + (item.city || "지역") + "</strong><br />"
-                        + "<div style=\"margin: 0.25rem 0 0.35rem; font-weight: 700; color: #14213d;\">" + workTitle + "</div>"
-                        + "<div style=\"color:#64748b; margin-bottom: 0.35rem;\">" + workAuthor + "</div>"
-                        + "<div style=\"color:#334155;\">" + (item.desc || "설명이 준비되어 있습니다.") + "</div>"
+                        + "<div class=\"map-popup-top\">"
+                        + "<span class=\"map-popup-location-chip\">" + popupFlag + (item.city || "지역") + "</span>"
+                        + "</div>"
+                        + "<div class=\"map-popup-title\">" + workTitle + "</div>"
+                        + "<div class=\"map-popup-author\">" + workAuthor + "</div>"
+                        + "<div class=\"map-popup-desc\">" + (item.desc || "설명이 준비되어 있습니다.") + "</div>"
                         + "</div>";
 
                     const popupLng = getNearestWrappedLng(item.lng);
-                    L.popup({ closeButton: true, autoClose: true, closeOnClick: false })
+                    L.popup({
+                        closeButton: true,
+                        autoClose: true,
+                        closeOnClick: false,
+                        autoPan: true,
+                        keepInView: true,
+                        autoPanPadding: [24, 24]
+                    })
                         .setLatLng([item.lat, popupLng])
                         .setContent(popupContent)
                         .openOn(map);
@@ -947,14 +1193,14 @@
                     }
                 }
 
-                function onWorkChipClick(item) {
+                async function onWorkChipClick(item) {
                     const shouldOpenPanel = panelVisible.value;
                     currentFilter.type = "country";
                     currentFilter.value = item.country;
 
                     map.closePopup();
-                    selectItem(item.id, { openPanel: shouldOpenPanel });
-                    showLocationPopupByItemId(item.id);
+                    await selectItem(item.id, { openPanel: shouldOpenPanel });
+                    await showLocationPopupByItemId(item.id);
                 }
 
                 function resetFilter() {
@@ -982,6 +1228,27 @@
 
                 function closePanel() {
                     panelVisible.value = false;
+                }
+
+                function finishIntro() {
+                    const elapsed = Date.now() - introStartTime;
+                    const remaining = Math.max(0, minimumIntroDuration - elapsed);
+                    if (introTimer) {
+                        clearTimeout(introTimer);
+                    }
+                    introTimer = setTimeout(() => {
+                        showIntro.value = false;
+                        introTimer = null;
+                    }, remaining);
+                }
+
+                function dismissIntro() {
+                    if (!showIntro.value) return;
+                    if (introTimer) {
+                        clearTimeout(introTimer);
+                        introTimer = null;
+                    }
+                    showIntro.value = false;
                 }
 
                 onMounted(async () => {
@@ -1013,9 +1280,14 @@
                     document.addEventListener("click", clickOutsideHandler);
 
                     setTimeout(() => map.invalidateSize(), 250);
+                    finishIntro();
                 });
 
                 onBeforeUnmount(() => {
+                    if (introTimer) {
+                        clearTimeout(introTimer);
+                        introTimer = null;
+                    }
                     if (map && moveEndHandler) {
                         map.off("moveend", moveEndHandler);
                     }
@@ -1043,6 +1315,8 @@
                     onWorkChipClick,
                     resetFilter,
                     clearSearch,
+                    showIntro,
+                    dismissIntro,
                     closePanel,
                     isWorkExpanded,
                     toggleWork,
