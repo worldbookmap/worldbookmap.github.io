@@ -870,6 +870,18 @@
                     return "표지 없음";
                 }
 
+                function getCoverApiCandidates(params) {
+                    const queryString = params.toString();
+                    const sameOriginPath = "/api/book-cover?" + queryString;
+                    const fallbackBase = "https://worldbookmap.vercel.app/api/book-cover?" + queryString;
+
+                    if (window.location.hostname === "worldbookmap.vercel.app") {
+                        return [sameOriginPath];
+                    }
+
+                    return [sameOriginPath, fallbackBase];
+                }
+
                 async function fetchBookCover(work) {
                     if (!work || !work.title) return;
 
@@ -888,21 +900,38 @@
                             params.set("author", work.author);
                         }
 
-                        const response = await fetch("/api/book-cover?" + params.toString(), { cache: "no-store" });
-                        if (!response.ok) {
-                            let detail = "HTTP " + response.status;
+                        const apiCandidates = getCoverApiCandidates(params);
+                        let payload = null;
+                        let lastError = "";
+
+                        for (const url of apiCandidates) {
                             try {
-                                const errorPayload = await response.json();
-                                if (errorPayload && errorPayload.error) {
-                                    detail = errorPayload.error;
+                                const response = await fetch(url, { cache: "no-store" });
+                                if (!response.ok) {
+                                    let detail = "HTTP " + response.status;
+                                    try {
+                                        const errorPayload = await response.json();
+                                        if (errorPayload && errorPayload.error) {
+                                            detail = errorPayload.error;
+                                        }
+                                    } catch {
+                                        // Ignore JSON parse failures for error response bodies.
+                                    }
+                                    lastError = detail;
+                                    continue;
                                 }
-                            } catch {
-                                // Ignore JSON parse failures for error response bodies.
+
+                                payload = await response.json();
+                                if (payload) break;
+                            } catch (error) {
+                                lastError = error && error.message ? error.message : String(error);
                             }
-                            throw new Error("표지 조회 실패: " + detail);
                         }
 
-                        const payload = await response.json();
+                        if (!payload) {
+                            throw new Error("표지 조회 실패: " + (lastError || "요청 실패"));
+                        }
+
                         const thumbnail = payload?.thumbnail || "";
 
                         if (!thumbnail) {
